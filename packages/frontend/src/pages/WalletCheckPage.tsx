@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError, type RiskResult, type TransferCheckResult } from "../api/client";
 import { AddressInput, NetworkSelect, Panel, PrimaryButton } from "../components/Shell";
 import { RiskGauge, RiskLevelBadge } from "../components/RiskGauge";
@@ -30,6 +30,38 @@ export function WalletCheckPage() {
 
   const transferFieldsFilled = sender.trim() && asset.trim() && amount.trim();
   const isTransferMode = showTransferDetails && Boolean(transferFieldsFilled);
+
+  // Supports deep links like /?address=0x...&network=polygon-mainnet — used
+  // by the Sentra browser extension's "View full report" link, so a quick
+  // scan-page check can hand off to the full evidence view without making
+  // the person retype the address.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linkedAddress = params.get("address");
+    if (!linkedAddress) return;
+    const linkedNetwork = params.get("network") || "polygon-mainnet";
+
+    setAddress(linkedAddress);
+    setNetwork(linkedNetwork);
+
+    (async () => {
+      setError(null);
+      setResult(null);
+      setTransferResult(null);
+      setLoading(true);
+      try {
+        const res = await api.checkRecipient(linkedAddress, linkedNetwork);
+        setResult(res);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Something went wrong reaching Sentra's API.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // Intentionally run once on mount only — this reads the URL the page
+    // was opened with, not something that should re-run on state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runCheck() {
     setError(null);

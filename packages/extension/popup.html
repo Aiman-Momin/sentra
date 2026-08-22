@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span>SENTRA</span>
+      </div>
+      <select id="network">
+        <option value="polygon-mainnet">Polygon Mainnet</option>
+        <option value="polygon-amoy">Polygon Amoy (testnet)</option>
+      </select>
+    </header>
+
+    <button id="scan-btn">Scan This Page</button>
+
+    <div id="status" class="status"></div>
+
+    <div id="results"></div>
+
+    <footer>
+      <button id="settings-toggle" class="link-btn">Settings</button>
+      <div id="settings" class="settings hidden">
+        <label>
+          API base URL
+          <input id="api-base-url" type="text" spellcheck="false" />
+        </label>
+        <label>
+          Sentra web app URL (for "view full report")
+          <input id="webapp-url" type="text" spellcheck="false" />
+        </label>
+        <button id="save-settings">Save</button>
+      </div>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
