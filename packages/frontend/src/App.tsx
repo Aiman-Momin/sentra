@@ -1,7 +1,6 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { WalletCheckPage } from "./pages/WalletCheckPage";
-import { TransferCheckPage } from "./pages/TransferCheckPage";
 import { MonitorPage } from "./pages/MonitorPage";
 
 export default function App() {
@@ -9,7 +8,8 @@ export default function App() {
     <Shell>
       <Routes>
         <Route path="/" element={<WalletCheckPage />} />
-        <Route path="/transfer" element={<TransferCheckPage />} />
+        {/* old bookmarks/links to /transfer still land somewhere useful */}
+        <Route path="/transfer" element={<Navigate to="/" replace />} />
         <Route path="/monitor" element={<MonitorPage />} />
       </Routes>
     </Shell>

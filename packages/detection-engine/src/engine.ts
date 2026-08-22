@@ -1,5 +1,5 @@
-import { ALL_DETECTORS } from "./signals";
-import type { RiskLevel, RiskResult, RiskSignal, WalletActivity } from "./types";
+import { ALL_DETECTORS } from "./signals.js";
+import type { RiskLevel, RiskResult, RiskSignal, WalletActivity } from "./types.js";
 
 const MIN_TRANSFERS_FOR_ANALYSIS = 1;
 
@@ -80,5 +80,5 @@ export function analyzeWallet(activity: WalletActivity, now: () => number = () =
   };
 }
 
-export * from "./types";
-export * from "./signals";
+export * from "./types.js";
+export * from "./signals.js";

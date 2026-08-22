@@ -2,7 +2,6 @@ import { NavLink } from "react-router-dom";
 
 const navItems = [
   { to: "/", label: "Wallet Check" },
-  { to: "/transfer", label: "Transfer Check" },
   { to: "/monitor", label: "Monitoring" },
 ];
 

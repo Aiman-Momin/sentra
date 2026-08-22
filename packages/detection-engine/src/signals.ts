@@ -1,4 +1,4 @@
-import type { NormalizedTransfer, RiskSignal } from "./types";
+import type { NormalizedTransfer, RiskSignal } from "./types.js";
 
 /**
  * Each detector is a pure function: (sorted transfers) -> RiskSignal | null.
