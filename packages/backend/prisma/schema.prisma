@@ -72,3 +72,45 @@ model Alert {
 
   @@index([monitoredWalletId, createdAt])
 }
+
+enum AddressClassification {
+  SWEEPER_DESTINATION
+  VERIFIED_SAFE
+}
+
+enum LearningSource {
+  // Learned automatically after a HIGH_RISK/ACTIVE_SWEEPER_LIKELY
+  // assessment saw the same destination drained to more than once.
+  AUTO_LEARNED
+  // Set by a human via the /api/feedback endpoint (false-positive report
+  // or explicit confirmation), and always takes precedence over an
+  // auto-learned classification for the same address.
+  MANUAL
+}
+
+// This is Sentra's cross-wallet memory. It's what makes the detection
+// engine "learn": a destination address confirmed as a sweeper
+// collection point on one wallet immediately informs the assessment of
+// any OTHER wallet that later sends to the same address (see
+// KNOWN_SWEEPER_DESTINATION in the detection engine). It's also what
+// makes false-positive reports actually reduce future false positives —
+// a manually-verified-safe address is excluded from drain scoring going
+// forward, not just for the one assessment that got reported.
+model KnownAddress {
+  id               String                 @id @default(cuid())
+  address          String
+  network          String
+  classification   AddressClassification
+  // 0-1. How much weight this gets in future scoring. Auto-learned
+  // entries start modest and are only reinforced by repeat occurrences;
+  // manual entries (from direct human feedback) start high.
+  confidence       Float                  @default(0.5)
+  occurrenceCount  Int                    @default(1)
+  source           LearningSource
+  note             String?
+  firstSeenAt      DateTime               @default(now())
+  lastSeenAt       DateTime               @updatedAt
+
+  @@unique([address, network])
+  @@index([network, classification])
+}

@@ -128,4 +128,52 @@ describe("analyzeWallet", () => {
     const result = analyzeWallet(activity(transfers));
     expect(result.riskScore).toBeLessThanOrEqual(100);
   });
+
+  it("flags a transfer to a previously-confirmed sweeper destination even when it wasn't fast", () => {
+    // Slow, single transfer — on its own this wouldn't trigger FAST_DRAIN
+    // at all. But the destination is one Sentra already confirmed as a
+    // sweeper collection point on some OTHER wallet.
+    const result = analyzeWallet(
+      activity([
+        tx({ txHash: "0x1", timestamp: 1000, direction: "IN", amount: "500" }),
+        tx({ txHash: "0x2", timestamp: 1000 + 3600, direction: "OUT", amount: "500", counterparty: "0xknownbad" }),
+      ]),
+      { knownSweeperDestinations: new Map([["0xknownbad", 0.9]]) }
+    );
+    const knownSignal = result.signals.find((s) => s.id === "KNOWN_SWEEPER_DESTINATION");
+    expect(knownSignal).toBeDefined();
+    expect(knownSignal!.weight).toBeGreaterThan(0);
+    expect(result.riskLevel).not.toBe("NORMAL");
+  });
+
+  it("does not flag transfers to a verified-safe address as a drain", () => {
+    // Exact same shape as the "repeated fast drains" ACTIVE_SWEEPER_LIKELY
+    // case, except the destination has been manually verified safe (e.g.
+    // after a false-positive report) — should read as NORMAL now.
+    const result = analyzeWallet(
+      activity([
+        tx({ txHash: "0x1", timestamp: 1000, direction: "IN", amount: "500" }),
+        tx({ txHash: "0x2", timestamp: 1002, direction: "OUT", amount: "500", counterparty: "0xdexrouter" }),
+        tx({ txHash: "0x3", timestamp: 2000, direction: "IN", amount: "1000" }),
+        tx({ txHash: "0x4", timestamp: 2002, direction: "OUT", amount: "1000", counterparty: "0xdexrouter" }),
+      ]),
+      { verifiedSafeAddresses: new Set(["0xdexrouter"]) }
+    );
+    expect(result.signals.length).toBe(0);
+    expect(result.riskLevel).toBe("NORMAL");
+  });
+
+  it("verified-safe suppression is per-address, not global — other destinations still score normally", () => {
+    const result = analyzeWallet(
+      activity([
+        tx({ txHash: "0x1", timestamp: 1000, direction: "IN", amount: "500" }),
+        tx({ txHash: "0x2", timestamp: 1002, direction: "OUT", amount: "500", counterparty: "0xdexrouter" }),
+        tx({ txHash: "0x3", timestamp: 2000, direction: "IN", amount: "1000" }),
+        tx({ txHash: "0x4", timestamp: 2002, direction: "OUT", amount: "1000", counterparty: "0xdest" }),
+      ]),
+      { verifiedSafeAddresses: new Set(["0xdexrouter"]) }
+    );
+    expect(result.signals.some((s) => s.id === "FAST_DRAIN")).toBe(true);
+    expect(result.riskLevel).not.toBe("NORMAL");
+  });
 });

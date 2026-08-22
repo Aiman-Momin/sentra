@@ -28,6 +28,8 @@ export interface RiskResult {
   timeline: NormalizedTransfer[];
   analyzedAt: number;
   insufficientData: boolean;
+  /** id of the persisted assessment — pass to api.submitFeedback */
+  assessmentId?: string;
 }
 
 export interface TransferCheckResult {
@@ -95,6 +97,12 @@ export const api = {
   recheckMonitoredWallet: (id: string) => request<RiskResult>(`/monitor/wallets/${id}/recheck`, { method: "POST" }),
 
   listAlerts: (walletId?: string) => request<Alert[]>(`/monitor/alerts${walletId ? `?walletId=${walletId}` : ""}`),
+
+  submitFeedback: (assessmentId: string, verdict: "FALSE_POSITIVE" | "CONFIRMED_SWEEPER") =>
+    request<{ updatedAddresses: string[] }>("/feedback", {
+      method: "POST",
+      body: JSON.stringify({ assessmentId, verdict }),
+    }),
 };
 
 export { ApiError };

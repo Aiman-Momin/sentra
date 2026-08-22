@@ -54,7 +54,30 @@ export type SignalId =
   | "REPEATED_DESTINATION"
   | "GAS_FUNDING_THEN_DRAIN"
   | "CONSISTENT_DRAIN_TIMING"
-  | "FULL_BALANCE_DRAIN";
+  | "FULL_BALANCE_DRAIN"
+  | "KNOWN_SWEEPER_DESTINATION";
+
+/**
+ * Optional external knowledge the engine can be given, learned from past
+ * assessments (see backend/src/services/learningService.ts). Passing this
+ * in does NOT make the engine impure or network-dependent — it's just
+ * data, computed by the caller ahead of time. An empty/omitted context
+ * behaves identically to the engine having no memory at all.
+ *
+ * - knownSweeperDestinations: address (lowercase) -> confidence (0-1).
+ *   Addresses Sentra has previously confirmed as sweeper drain
+ *   destinations, on ANY wallet, not just this one. A single transfer to
+ *   one of these is treated seriously even if it wasn't fast — the
+ *   address itself is already incriminating.
+ * - verifiedSafeAddresses: address (lowercase) set. Addresses a human
+ *   has confirmed are legitimate (DEX routers, exchange hot wallets,
+ *   etc.) after a false-positive report. Transfers to these are excluded
+ *   from drain-pattern scoring entirely.
+ */
+export interface DetectionContext {
+  knownSweeperDestinations?: Map<string, number>;
+  verifiedSafeAddresses?: Set<string>;
+}
 
 export interface RiskSignal {
   id: SignalId;

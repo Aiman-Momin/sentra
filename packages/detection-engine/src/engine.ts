@@ -1,5 +1,5 @@
 import { ALL_DETECTORS } from "./signals.js";
-import type { RiskLevel, RiskResult, RiskSignal, WalletActivity } from "./types.js";
+import type { DetectionContext, RiskLevel, RiskResult, RiskSignal, WalletActivity } from "./types.js";
 
 const MIN_TRANSFERS_FOR_ANALYSIS = 1;
 
@@ -33,11 +33,29 @@ function recommendationFor(level: RiskLevel): string {
 }
 
 /**
- * Core entry point. Pure function of WalletActivity -> RiskResult.
- * No I/O, no randomness, no wall-clock reads except for `analyzedAt`
- * (injectable via `now` for deterministic tests).
+ * Core entry point. Pure function of (WalletActivity, DetectionContext) ->
+ * RiskResult. No I/O, no randomness, no wall-clock reads except for
+ * `analyzedAt` (injectable via `now` for deterministic tests).
+ *
+ * `context` is optional and defaults to empty — a caller with no learned
+ * knowledge yet behaves identically to the engine having no memory at
+ * all. When supplied (see backend/src/services/learningService.ts), two
+ * things change:
+ *   1. Transfers to a `verifiedSafeAddresses` destination are excluded
+ *      from drain-pattern scoring entirely — this is how a confirmed
+ *      false positive (e.g. a DEX router that legitimately receives and
+ *      immediately forwards funds) stops re-triggering once reported.
+ *   2. A transfer to a `knownSweeperDestinations` address adds the
+ *      KNOWN_SWEEPER_DESTINATION signal — this is what lets one
+ *      wallet's confirmed sweep immediately inform the assessment of a
+ *      completely different wallet that happens to drain to the same
+ *      place.
  */
-export function analyzeWallet(activity: WalletActivity, now: () => number = () => Date.now() / 1000): RiskResult {
+export function analyzeWallet(
+  activity: WalletActivity,
+  context: DetectionContext = {},
+  now: () => number = () => Date.now() / 1000
+): RiskResult {
   const sorted = [...activity.transfers].sort((a, b) => {
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
     return a.blockNumber - b.blockNumber;
@@ -57,9 +75,19 @@ export function analyzeWallet(activity: WalletActivity, now: () => number = () =
     };
   }
 
+  // Verified-safe destinations are excluded from drain-pattern scoring
+  // (fast drain, repeated drain, etc.) but stay in the full timeline
+  // shown to the user — we're not hiding the transaction, just no
+  // longer treating it as evidence of a sweep.
+  const verifiedSafe = context.verifiedSafeAddresses;
+  const scoringInput =
+    verifiedSafe && verifiedSafe.size > 0
+      ? sorted.filter((t) => !(t.direction === "OUT" && verifiedSafe.has(t.counterparty.toLowerCase())))
+      : sorted;
+
   const signals: RiskSignal[] = [];
   for (const detect of ALL_DETECTORS) {
-    const signal = detect(sorted);
+    const signal = detect(scoringInput, context);
     if (signal) signals.push(signal);
   }
 

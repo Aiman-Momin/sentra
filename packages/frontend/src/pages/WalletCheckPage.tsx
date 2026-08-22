@@ -25,6 +25,8 @@ export function WalletCheckPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RiskResult | null>(null);
   const [transferResult, setTransferResult] = useState<TransferCheckResult | null>(null);
+  const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "submitting" | "submitted">("idle");
+  const [feedbackVerdict, setFeedbackVerdict] = useState<"FALSE_POSITIVE" | "CONFIRMED_SWEEPER" | null>(null);
 
   const transferFieldsFilled = sender.trim() && asset.trim() && amount.trim();
   const isTransferMode = showTransferDetails && Boolean(transferFieldsFilled);
@@ -33,6 +35,8 @@ export function WalletCheckPage() {
     setError(null);
     setResult(null);
     setTransferResult(null);
+    setFeedbackStatus("idle");
+    setFeedbackVerdict(null);
     setLoading(true);
     try {
       if (isTransferMode) {
@@ -52,6 +56,18 @@ export function WalletCheckPage() {
       setError(err instanceof ApiError ? err.message : "Something went wrong reaching Sentra's API.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function submitFeedback(verdict: "FALSE_POSITIVE" | "CONFIRMED_SWEEPER") {
+    if (!risk?.assessmentId) return;
+    setFeedbackStatus("submitting");
+    try {
+      await api.submitFeedback(risk.assessmentId, verdict);
+      setFeedbackVerdict(verdict);
+      setFeedbackStatus("submitted");
+    } catch {
+      setFeedbackStatus("idle");
     }
   }
 
@@ -211,6 +227,50 @@ export function WalletCheckPage() {
                   </div>
                 ))}
               </div>
+
+              {risk.assessmentId && (
+                <div
+                  style={{
+                    marginTop: 18,
+                    paddingTop: 16,
+                    borderTop: "1px solid var(--rule)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {feedbackStatus === "submitted" ? (
+                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-soft)" }}>
+                      {feedbackVerdict === "FALSE_POSITIVE"
+                        ? "Thanks — this address won't be flagged like this again."
+                        : "Thanks — this destination is now remembered as a known sweeper address."}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", letterSpacing: "0.04em" }}>
+                        DOES THIS LOOK RIGHT?
+                      </span>
+                      <button
+                        onClick={() => submitFeedback("CONFIRMED_SWEEPER")}
+                        disabled={feedbackStatus === "submitting"}
+                        className="mono"
+                        style={ghostBtn}
+                      >
+                        Confirm — this is a sweeper
+                      </button>
+                      <button
+                        onClick={() => submitFeedback("FALSE_POSITIVE")}
+                        disabled={feedbackStatus === "submitting"}
+                        className="mono"
+                        style={{ ...ghostBtn, color: "var(--ink-faint)" }}
+                      >
+                        This looks wrong — false positive
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </Panel>
           )}
 
@@ -257,3 +317,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "1.5px solid var(--ink)",
+  color: "var(--ink)",
+  borderRadius: 2,
+  padding: "6px 10px",
+  fontSize: 10.5,
+  letterSpacing: "0.04em",
+  cursor: "pointer",
+};

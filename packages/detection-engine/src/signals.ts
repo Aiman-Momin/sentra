@@ -1,4 +1,4 @@
-import type { NormalizedTransfer, RiskSignal } from "./types.js";
+import type { DetectionContext, NormalizedTransfer, RiskSignal } from "./types.js";
 
 /**
  * Each detector is a pure function: (sorted transfers) -> RiskSignal | null.
@@ -80,7 +80,7 @@ function findDepositDrainPairs(transfers: NormalizedTransfer[]): DepositDrainPai
   return pairs;
 }
 
-export function detectFastDrain(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectFastDrain(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers);
   if (pairs.length === 0) return null;
   // Use the fastest pair found — the strongest single piece of evidence.
@@ -95,7 +95,7 @@ export function detectFastDrain(transfers: NormalizedTransfer[]): RiskSignal | n
   };
 }
 
-export function detectRepeatedFastDrain(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectRepeatedFastDrain(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers).filter((p) => speedFactor(p.gapSeconds) > 0);
   if (pairs.length < REPEATED_FAST_DRAIN_MIN_OCCURRENCES) return null;
   const avgFactor = pairs.reduce((sum, p) => sum + speedFactor(p.gapSeconds), 0) / pairs.length;
@@ -108,7 +108,7 @@ export function detectRepeatedFastDrain(transfers: NormalizedTransfer[]): RiskSi
   };
 }
 
-export function detectMultiAssetSweep(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectMultiAssetSweep(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers);
   const assets = new Set(pairs.map((p) => p.deposit.asset));
   if (assets.size < 2) return null;
@@ -121,7 +121,7 @@ export function detectMultiAssetSweep(transfers: NormalizedTransfer[]): RiskSign
   };
 }
 
-export function detectRepeatedDestination(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectRepeatedDestination(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers);
   const destCounts = new Map<string, NormalizedTransfer[]>();
   for (const p of pairs) {
@@ -145,7 +145,7 @@ export function detectRepeatedDestination(transfers: NormalizedTransfer[]): Risk
  * can move an ERC-20 out (to pay gas). A small native-token IN followed
  * shortly by a token OUT is a strong tell.
  */
-export function detectGasFundingThenDrain(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectGasFundingThenDrain(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const nativeDeposits = transfers.filter((t) => t.direction === "IN" && t.isNativeAsset);
   if (nativeDeposits.length === 0) return null;
 
@@ -169,7 +169,7 @@ export function detectGasFundingThenDrain(transfers: NormalizedTransfer[]): Risk
   return null;
 }
 
-export function detectConsistentDrainTiming(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectConsistentDrainTiming(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers);
   if (pairs.length < CONSISTENT_TIMING_MIN_OCCURRENCES) return null;
   const gaps = pairs.map((p) => p.gapSeconds);
@@ -190,7 +190,7 @@ export function detectConsistentDrainTiming(transfers: NormalizedTransfer[]): Ri
  * If a drain's amount is (approximately) equal to the deposit amount, the
  * whole balance is being swept, not just an unrelated withdrawal.
  */
-export function detectFullBalanceDrain(transfers: NormalizedTransfer[]): RiskSignal | null {
+export function detectFullBalanceDrain(transfers: NormalizedTransfer[], _context: DetectionContext): RiskSignal | null {
   const pairs = findDepositDrainPairs(transfers);
   const fullDrains = pairs.filter((p) => {
     const depositAmt = parseFloat(p.deposit.amount);
@@ -208,6 +208,44 @@ export function detectFullBalanceDrain(transfers: NormalizedTransfer[]): RiskSig
   };
 }
 
+/**
+ * Checks outgoing transfers against addresses Sentra has previously
+ * confirmed as sweeper collection points — on ANY wallet, not just this
+ * one. This is what lets Sentra "learn": once a destination is confirmed
+ * (see backend/src/services/learningService.ts), a transfer to it is
+ * treated seriously immediately, even a single one, even if it wasn't
+ * fast — because the destination itself is already incriminating,
+ * independent of this wallet's own timing pattern.
+ *
+ * Confidence (0-1, supplied by the caller) scales the weight: an address
+ * seen once before is weighted lower than one confirmed across many
+ * distinct victim wallets or manually verified.
+ */
+export function detectKnownSweeperDestination(
+  transfers: NormalizedTransfer[],
+  context: DetectionContext
+): RiskSignal | null {
+  const known = context.knownSweeperDestinations;
+  if (!known || known.size === 0) return null;
+
+  const hits = transfers.filter((t) => t.direction === "OUT" && known.has(t.counterparty.toLowerCase()));
+  if (hits.length === 0) return null;
+
+  let bestConfidence = 0;
+  for (const h of hits) {
+    const c = known.get(h.counterparty.toLowerCase()) ?? 0;
+    if (c > bestConfidence) bestConfidence = c;
+  }
+
+  return {
+    id: "KNOWN_SWEEPER_DESTINATION",
+    description:
+      "Funds were sent to an address Sentra has already confirmed as a sweeper collection point on other wallets.",
+    weight: Math.round(35 * bestConfidence),
+    evidenceTxHashes: hits.map((h) => h.txHash),
+  };
+}
+
 export const ALL_DETECTORS = [
   detectFastDrain,
   detectRepeatedFastDrain,
@@ -216,4 +254,5 @@ export const ALL_DETECTORS = [
   detectGasFundingThenDrain,
   detectConsistentDrainTiming,
   detectFullBalanceDrain,
+  detectKnownSweeperDestination,
 ];
