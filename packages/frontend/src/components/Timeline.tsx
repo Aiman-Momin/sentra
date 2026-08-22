@@ -1,20 +1,4 @@
-/**
- * NOTE: your api/client.ts wasn't in what I received, so this reads
- * transfer fields defensively (checking a few likely field names) instead
- * of importing your real `Transfer` type. Once you drop this in, swap the
- * `TimelineTransfer` shape below for your actual type and remove the
- * fallback chains in `field()` — they're only here so this compiles and
- * renders sensibly against several plausible shapes.
- */
-type TimelineTransfer = Record<string, unknown>;
-
-function field(t: TimelineTransfer, keys: string[]): string | undefined {
-  for (const k of keys) {
-    const v = t[k];
-    if (v !== undefined && v !== null && v !== "") return String(v);
-  }
-  return undefined;
-}
+import type { NormalizedTransfer } from "../api/client";
 
 function truncateHash(h?: string) {
   if (!h) return "—";
@@ -38,7 +22,7 @@ export function Timeline({
   network,
   highlightTxHashes,
 }: {
-  transfers: TimelineTransfer[];
+  transfers: NormalizedTransfer[];
   network?: string;
   highlightTxHashes?: Set<string>;
 }) {
@@ -53,17 +37,11 @@ export function Timeline({
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {transfers.map((t, i) => {
-        const hash = field(t, ["hash", "txHash", "transactionHash"]);
-        const from = field(t, ["from", "fromAddress", "sender"]);
-        const to = field(t, ["to", "toAddress", "recipient"]);
-        const amount = field(t, ["amount", "value", "formattedValue"]);
-        const asset = field(t, ["asset", "token", "symbol", "tokenSymbol"]);
-        const timestamp = field(t, ["timestamp", "blockTimestamp", "time", "date"]);
-        const isEvidence = Boolean(hash && highlightTxHashes?.has(hash));
+        const isEvidence = highlightTxHashes?.has(t.txHash) ?? false;
 
         return (
           <div
-            key={hash ?? i}
+            key={t.txHash || i}
             style={{
               display: "flex",
               alignItems: "center",
@@ -78,15 +56,15 @@ export function Timeline({
             <DrainPulse alert={isEvidence} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="mono" style={{ fontSize: 12, color: "var(--ink)" }}>
-                {truncateHash(from)} → {truncateHash(to)}
+                {t.direction === "IN" ? "→" : "←"} {truncateHash(t.counterparty)}
               </div>
               <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", marginTop: 3 }}>
-                {timestamp ?? "unknown time"} {hash ? `· ${truncateHash(hash)}` : ""}
+                {new Date(t.timestamp * 1000).toLocaleString()} · {truncateHash(t.txHash)}
               </div>
             </div>
-            {(amount || asset) && (
+            {(t.amount || t.asset) && (
               <div className="mono" style={{ fontSize: 12.5, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
-                {amount} {asset}
+                {t.amount} {t.asset}
               </div>
             )}
             {isEvidence && <span className="stamp stamp-danger" style={{ fontSize: 9.5, padding: "3px 8px" }}>EVIDENCE</span>}
