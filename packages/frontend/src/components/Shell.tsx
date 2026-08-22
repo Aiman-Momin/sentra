@@ -1,58 +1,48 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
+import { Footer } from "./Footer";
 
 const navItems = [
-  { to: "/", label: "Wallet Check" },
-  { to: "/monitor", label: "Monitoring" },
+  { to: "/app", label: "WALLET CHECK" },
+  { to: "/app/monitor", label: "MONITORING" },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100%", display: "flex" }}>
-      <aside
-        style={{
-          width: 220,
-          borderRight: "1px solid var(--line)",
-          padding: "28px 20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 32,
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em" }}>
-            SENTRA
+    <div className="app-shell">
+      <div className="cf-topbar">
+        <div style={{ width: "100%" }}>
+          <div className="cf-brand-row">
+            <Link to="/" className="app-brand">
+              <div className="app-brand-mark">S</div>
+              <div>
+                <div className="app-brand-name">SENTRA</div>
+                <div className="app-brand-sub">WALLET RISK INTAKE</div>
+              </div>
+            </Link>
+            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", textAlign: "right" }}>
+              NON-CUSTODIAL
+              <br />
+              never asks for seed phrases or keys
+            </div>
           </div>
-          <div className="mono" style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
-            detect the drain
-            <br />
-            before the deposit
-          </div>
+          <nav className="cf-tabs">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/app"}
+                className={({ isActive }) => `cf-tab${isActive ? " cf-tab-active" : ""}`}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
         </div>
-        <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              style={({ isActive }) => ({
-                padding: "9px 10px",
-                borderRadius: 6,
-                fontSize: 13.5,
-                textDecoration: "none",
-                color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                background: isActive ? "var(--bg-2)" : "transparent",
-                borderLeft: isActive ? "2px solid var(--cyan)" : "2px solid transparent",
-              })}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div style={{ marginTop: "auto", fontSize: 11, color: "var(--text-tertiary)" }}>
-          Non-custodial. Never asks for seed phrases or private keys.
-        </div>
-      </aside>
-      <main style={{ flex: 1, padding: "32px 40px", maxWidth: 920 }}>{children}</main>
+      </div>
+      <main className="app-main">
+        <div className="app-content">{children}</div>
+        <Footer />
+      </main>
     </div>
   );
 }
@@ -62,14 +52,14 @@ export function NetworkSelect({ value, onChange }: { value: string; onChange: (v
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="mono"
+      className="mono ui-control"
       style={{
-        background: "var(--bg-1)",
-        border: "1px solid var(--line)",
-        color: "var(--text-primary)",
-        borderRadius: 6,
+        background: "var(--paper-raised)",
+        border: "1.5px solid var(--ink)",
+        color: "var(--ink)",
+        borderRadius: 2,
         padding: "10px 12px",
-        fontSize: 13,
+        fontSize: 12.5,
       }}
     >
       <option value="polygon-mainnet">Polygon Mainnet</option>
@@ -92,13 +82,13 @@ export function AddressInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mono"
+      className="mono ui-control"
       spellCheck={false}
       style={{
-        background: "var(--bg-1)",
-        border: "1px solid var(--line)",
-        color: "var(--text-primary)",
-        borderRadius: 6,
+        background: "var(--paper-raised)",
+        border: "1.5px solid var(--ink)",
+        color: "var(--ink)",
+        borderRadius: 2,
         padding: "10px 12px",
         fontSize: 13,
         width: "100%",
@@ -120,19 +110,22 @@ export function PrimaryButton({
 }) {
   return (
     <button
+      className="ui-primary-button"
       type={type}
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: disabled ? "var(--bg-2)" : "var(--cyan)",
-        color: disabled ? "var(--text-tertiary)" : "#0a1216",
-        border: "none",
-        borderRadius: 6,
-        padding: "11px 20px",
-        fontSize: 13.5,
+        background: disabled ? "var(--paper-shade)" : "var(--ink)",
+        color: disabled ? "var(--ink-faint)" : "var(--paper)",
+        border: "1.5px solid var(--ink)",
+        borderRadius: 2,
+        padding: "10.5px 20px",
+        fontSize: 13,
         fontWeight: 600,
+        fontFamily: "var(--font-display)",
+        letterSpacing: "0.02em",
         cursor: disabled ? "not-allowed" : "pointer",
-        letterSpacing: "0.01em",
+        boxShadow: disabled ? "none" : undefined,
       }}
     >
       {children}
@@ -143,10 +136,8 @@ export function PrimaryButton({
 export function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div
+      className="ui-panel"
       style={{
-        background: "var(--bg-1)",
-        border: "1px solid var(--line)",
-        borderRadius: 10,
         padding: 24,
         ...style,
       }}

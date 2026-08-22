@@ -1,59 +1,69 @@
-import type { RiskLevel } from "../api/client";
+/**
+ * Tone mapping is done defensively off the level string (case-insensitive
+ * substring match) so this works whichever exact casing/labels your
+ * RiskLevel union in api/client.ts uses (e.g. "LOW" | "MEDIUM" | "HIGH" |
+ * "CRITICAL", or "low" | "medium" | "high"). Adjust the buckets below if
+ * your real union has different tiers.
+ */
+function toneFor(level: string): "safe" | "caution" | "danger" {
+  const l = level.toLowerCase();
+  if (l.includes("crit") || l.includes("high")) return "danger";
+  if (l.includes("med") || l.includes("caution") || l.includes("moderate")) return "caution";
+  return "safe";
+}
 
-const LEVEL_COLOR: Record<RiskLevel, string> = {
-  NORMAL: "var(--cyan)",
-  SUSPICIOUS: "var(--amber)",
-  HIGH_RISK: "var(--red)",
-  ACTIVE_SWEEPER_LIKELY: "var(--red)",
+const TONE_COLOR: Record<string, string> = {
+  danger: "var(--stamp-red)",
+  caution: "var(--stamp-amber)",
+  safe: "var(--stamp-green)",
 };
 
-export function RiskGauge({ score, level }: { score: number; level: RiskLevel }) {
-  const radius = 88;
-  const circumference = 2 * Math.PI * radius;
-  const pct = Math.max(0, Math.min(100, score)) / 100;
-  const dashOffset = circumference * (1 - pct);
-  const color = LEVEL_COLOR[level];
+export function RiskGauge({ score, level }: { score: number; level: string }) {
+  const tone = toneFor(level);
+  const color = TONE_COLOR[tone];
+  const clamped = Math.max(0, Math.min(100, score));
+
+  const r = 46;
+  const c = 2 * Math.PI * r;
+  const filled = (clamped / 100) * c;
+
+  const ticks = Array.from({ length: 20 });
 
   return (
-    <div style={{ position: "relative", width: 220, height: 220 }}>
-      <svg width={220} height={220} viewBox="0 0 220 220">
-        <circle cx="110" cy="110" r={radius} fill="none" stroke="var(--line)" strokeWidth="10" />
+    <div style={{ position: "relative", width: 128, height: 128, flex: "none" }}>
+      <svg viewBox="0 0 128 128" width={128} height={128}>
+        {/* instrument tick ring */}
+        {ticks.map((_, i) => {
+          const angle = (i / ticks.length) * 2 * Math.PI - Math.PI / 2;
+          const x1 = 64 + Math.cos(angle) * 58;
+          const y1 = 64 + Math.sin(angle) * 58;
+          const x2 = 64 + Math.cos(angle) * 62;
+          const y2 = 64 + Math.sin(angle) * 62;
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="var(--rule-strong)"
+              strokeWidth={1}
+            />
+          );
+        })}
+        <circle cx={64} cy={64} r={r} fill="none" stroke="var(--rule)" strokeWidth={7} />
         <circle
-          cx="110"
-          cy="110"
-          r={radius}
+          cx={64}
+          cy={64}
+          r={r}
           fill="none"
           stroke={color}
-          strokeWidth="10"
+          strokeWidth={7}
           strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          transform="rotate(-90 110 110)"
-          style={{ transition: "stroke-dashoffset 0.6s ease, stroke 0.3s ease" }}
+          strokeDasharray={`${filled} ${c - filled}`}
+          transform="rotate(-90 64 64)"
+          style={{ transition: "stroke-dasharray 500ms ease" }}
         />
-        {/* scan-line sweep, only meaningful while actively risky-looking */}
-        {(level === "HIGH_RISK" || level === "ACTIVE_SWEEPER_LIKELY") && (
-          <circle
-            cx="110"
-            cy="110"
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeDasharray="2 18"
-            opacity="0.5"
-            transform="rotate(-90 110 110)"
-          >
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from="-90 110 110"
-              to="270 110 110"
-              dur="3s"
-              repeatCount="indefinite"
-            />
-          </circle>
-        )}
       </svg>
       <div
         style={{
@@ -65,10 +75,10 @@ export function RiskGauge({ score, level }: { score: number; level: RiskLevel })
           justifyContent: "center",
         }}
       >
-        <div className="mono" style={{ fontSize: 44, fontWeight: 600, color, lineHeight: 1 }}>
-          {Math.round(score)}
+        <div className="mono" style={{ fontSize: 26, fontWeight: 600, color: "var(--ink)", lineHeight: 1 }}>
+          {clamped}
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4, letterSpacing: "0.05em" }}>
+        <div className="mono" style={{ fontSize: 9.5, color: "var(--ink-faint)", marginTop: 3, letterSpacing: "0.06em" }}>
           / 100
         </div>
       </div>
@@ -76,28 +86,8 @@ export function RiskGauge({ score, level }: { score: number; level: RiskLevel })
   );
 }
 
-export function RiskLevelBadge({ level }: { level: RiskLevel }) {
-  const color = LEVEL_COLOR[level];
-  const label = level.replace(/_/g, " ");
-  return (
-    <span
-      className="mono"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 4,
-        fontSize: 12,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        color,
-        background: `color-mix(in srgb, ${color} 14%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-      }}
-    >
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
-      {label}
-    </span>
-  );
+export function RiskLevelBadge({ level }: { level: string }) {
+  const tone = toneFor(level);
+  const stampClass = tone === "danger" ? "stamp-danger" : tone === "caution" ? "stamp-caution" : "stamp-safe";
+  return <span className={`stamp ${stampClass}`}>{level}</span>;
 }

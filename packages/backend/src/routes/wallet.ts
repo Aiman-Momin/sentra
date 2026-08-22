@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
+import { ethers } from "ethers";
 import { checkWallet, getAssessmentHistory } from "../services/riskService.js";
 
 export const walletRouter = Router();
 
 const checkSchema = z.object({
-  address: z.string().min(1),
+  address: z.string().refine(ethers.isAddress, "Must be a valid wallet address"),
   network: z.string().min(1),
 });
 

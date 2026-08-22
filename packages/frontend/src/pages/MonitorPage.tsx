@@ -66,97 +66,80 @@ export function MonitorPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Monitoring</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 13.5, marginTop: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div className="page-heading">
+        <div className="page-heading-ref">DOCKET — STANDING WATCH</div>
+        <h1 style={{ fontSize: 23, fontWeight: 700, margin: 0 }}>Monitoring</h1>
+        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 8, maxWidth: 520, lineHeight: 1.6 }}>
           Sentra re-checks monitored wallets on a schedule and raises an alert the moment new sweeper
           behavior appears.
         </p>
       </div>
 
       <Panel>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 2 }}>
-            <AddressInput value={address} onChange={setAddress} placeholder="Wallet address to monitor" />
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 2, minWidth: 200 }}>
+            <Field label="Wallet address">
+              <AddressInput value={address} onChange={setAddress} placeholder="0x... wallet to monitor" />
+            </Field>
           </div>
-          <div style={{ flex: 1 }}>
-            <AddressInput value={label} onChange={setLabel} placeholder="Label (optional)" />
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <Field label="Label (optional)">
+              <AddressInput value={label} onChange={setLabel} placeholder="e.g. Exchange hot wallet" />
+            </Field>
           </div>
-          <NetworkSelect value={network} onChange={setNetwork} />
+          <Field label="Network">
+            <NetworkSelect value={network} onChange={setNetwork} />
+          </Field>
           <PrimaryButton onClick={addWallet} disabled={busy || !address.trim()}>
-            Add
+            ADD TO WATCH
           </PrimaryButton>
         </div>
       </Panel>
 
       {error && (
-        <Panel style={{ borderColor: "var(--red)", background: "var(--red-dim)" }}>
-          <div className="mono" style={{ fontSize: 13, color: "var(--red)" }}>
+        <Panel style={{ borderColor: "var(--stamp-red)", background: "var(--stamp-red-wash)", boxShadow: "3px 3px 0 var(--stamp-red)" }}>
+          <div className="mono" style={{ fontSize: 13, color: "var(--stamp-red)" }}>
             {error}
           </div>
         </Panel>
       )}
 
       <Panel>
-        <h2 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 14px", color: "var(--text-secondary)" }}>
-          MONITORED WALLETS
-        </h2>
+        <SectionHeading>Monitored Wallets</SectionHeading>
         {wallets.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Not watching any wallets yet.</div>
+          <div style={{ fontSize: 13, color: "var(--ink-faint)" }}>Not watching any wallets yet.</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {wallets.map((w) => (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {wallets.map((w, i) => (
               <div
                 key={w.id}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 12,
-                  padding: "10px 12px",
-                  border: "1px solid var(--line)",
-                  borderRadius: 8,
+                  padding: "12px 4px",
+                  borderTop: i === 0 ? "none" : "1px solid var(--rule)",
+                  flexWrap: "wrap",
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{w.label || "Unlabeled wallet"}</div>
-                  <div className="mono" style={{ fontSize: 11.5, color: "var(--text-tertiary)" }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, fontFamily: "var(--font-display)" }}>
+                    {w.label || "Unlabeled wallet"}
+                  </div>
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 2 }}>
                     {w.address} · {w.network}
                   </div>
                 </div>
                 {w.lastRiskLevel && <RiskLevelBadge level={w.lastRiskLevel} />}
-                <span className="mono" style={{ fontSize: 11.5, color: "var(--text-tertiary)" }}>
+                <span className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)" }}>
                   {w.lastCheckedAt ? `checked ${new Date(w.lastCheckedAt).toLocaleTimeString()}` : "never checked"}
                 </span>
-                <button
-                  onClick={() => recheck(w.id)}
-                  disabled={busy}
-                  style={{
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line)",
-                    color: "var(--text-primary)",
-                    borderRadius: 6,
-                    padding: "6px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  Recheck
+                <button onClick={() => recheck(w.id)} disabled={busy} className="mono" style={ghostBtn}>
+                  RECHECK
                 </button>
-                <button
-                  onClick={() => remove(w.id)}
-                  disabled={busy}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--line)",
-                    color: "var(--text-tertiary)",
-                    borderRadius: 6,
-                    padding: "6px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  Remove
+                <button onClick={() => remove(w.id)} disabled={busy} className="mono" style={{ ...ghostBtn, color: "var(--ink-faint)" }}>
+                  REMOVE
                 </button>
               </div>
             ))}
@@ -165,16 +148,23 @@ export function MonitorPage() {
       </Panel>
 
       <Panel>
-        <h2 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 14px", color: "var(--text-secondary)" }}>
-          ALERTS
-        </h2>
+        <SectionHeading>Alerts</SectionHeading>
         {alerts.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>No alerts yet.</div>
+          <div style={{ fontSize: 13, color: "var(--ink-faint)" }}>No alerts yet.</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {alerts.map((a) => (
-              <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                <span className="mono" style={{ fontSize: 11, color: "var(--red)", whiteSpace: "nowrap" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {alerts.map((a, i) => (
+              <div
+                key={a.id}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "baseline",
+                  padding: "10px 4px",
+                  borderTop: i === 0 ? "none" : "1px solid var(--rule)",
+                }}
+              >
+                <span className="mono" style={{ fontSize: 10.5, color: "var(--stamp-red)", whiteSpace: "nowrap" }}>
                   {new Date(a.createdAt).toLocaleString()}
                 </span>
                 <span style={{ fontSize: 13 }}>{a.message}</span>
@@ -184,5 +174,47 @@ export function MonitorPage() {
         )}
       </Panel>
     </div>
+  );
+}
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "1.5px solid var(--ink)",
+  color: "var(--ink)",
+  borderRadius: 2,
+  padding: "6px 10px",
+  fontSize: 10.5,
+  letterSpacing: "0.04em",
+  cursor: "pointer",
+};
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        margin: "0 0 14px",
+        color: "var(--ink-soft)",
+        fontFamily: "var(--font-mono)",
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        paddingBottom: 10,
+        borderBottom: "1px solid var(--rule)",
+      }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", letterSpacing: "0.06em" }}>
+        {label.toUpperCase()}
+      </span>
+      {children}
+    </label>
   );
 }

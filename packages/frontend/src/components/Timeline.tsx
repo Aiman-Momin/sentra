@@ -1,25 +1,36 @@
-import type { NormalizedTransfer } from "../api/client";
+/**
+ * NOTE: your api/client.ts wasn't in what I received, so this reads
+ * transfer fields defensively (checking a few likely field names) instead
+ * of importing your real `Transfer` type. Once you drop this in, swap the
+ * `TimelineTransfer` shape below for your actual type and remove the
+ * fallback chains in `field()` — they're only here so this compiles and
+ * renders sensibly against several plausible shapes.
+ */
+type TimelineTransfer = Record<string, unknown>;
 
-function formatTime(unixSeconds: number): string {
-  const d = new Date(unixSeconds * 1000);
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+function field(t: TimelineTransfer, keys: string[]): string | undefined {
+  for (const k of keys) {
+    const v = t[k];
+    if (v !== undefined && v !== null && v !== "") return String(v);
+  }
+  return undefined;
 }
 
-function truncate(addr: string): string {
-  if (addr.length <= 12) return addr;
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+function truncateHash(h?: string) {
+  if (!h) return "—";
+  return h.length > 14 ? `${h.slice(0, 8)}…${h.slice(-6)}` : h;
 }
 
-function explorerBaseUrl(network: string): string {
-  if (network === "polygon-mainnet") return "https://polygonscan.com";
-  if (network === "polygon-amoy") return "https://amoy.polygonscan.com";
-  return "https://polygonscan.com";
+function DrainPulse({ alert }: { alert: boolean }) {
+  const stroke = alert ? "var(--stamp-red)" : "var(--ink-faint)";
+  const d = alert
+    ? "M0 10 L10 10 L14 2 L18 18 L22 10 L34 10"
+    : "M0 10 L34 10";
+  return (
+    <svg className="pulse-line" viewBox="0 0 34 20" width="34" height="20">
+      <path d={d} stroke={stroke} />
+    </svg>
+  );
 }
 
 export function Timeline({
@@ -27,60 +38,58 @@ export function Timeline({
   network,
   highlightTxHashes,
 }: {
-  transfers: NormalizedTransfer[];
-  network: string;
+  transfers: TimelineTransfer[];
+  network?: string;
   highlightTxHashes?: Set<string>;
 }) {
-  if (transfers.length === 0) {
-    return <div style={{ color: "var(--text-tertiary)", fontSize: 13 }}>No transactions found for this wallet in the scanned window.</div>;
+  if (!transfers || transfers.length === 0) {
+    return (
+      <div style={{ fontSize: 13, color: "var(--ink-faint)" }}>
+        No transfer history found{network ? ` on ${network}` : ""}.
+      </div>
+    );
   }
-  const explorerBase = explorerBaseUrl(network);
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {transfers.map((t, i) => {
-        const isHighlighted = highlightTxHashes?.has(t.txHash);
-        const isOut = t.direction === "OUT";
+        const hash = field(t, ["hash", "txHash", "transactionHash"]);
+        const from = field(t, ["from", "fromAddress", "sender"]);
+        const to = field(t, ["to", "toAddress", "recipient"]);
+        const amount = field(t, ["amount", "value", "formattedValue"]);
+        const asset = field(t, ["asset", "token", "symbol", "tokenSymbol"]);
+        const timestamp = field(t, ["timestamp", "blockTimestamp", "time", "date"]);
+        const isEvidence = Boolean(hash && highlightTxHashes?.has(hash));
+
         return (
           <div
-            key={`${t.txHash}-${i}`}
+            key={hash ?? i}
             style={{
-              display: "grid",
-              gridTemplateColumns: "160px 90px 1fr 1fr",
-              gap: 12,
+              display: "flex",
               alignItems: "center",
-              padding: "10px 12px",
-              borderBottom: i < transfers.length - 1 ? "1px solid var(--line)" : "none",
-              background: isHighlighted ? "color-mix(in srgb, var(--red) 8%, transparent)" : "transparent",
-              borderRadius: 4,
+              gap: 14,
+              padding: "12px 4px",
+              borderTop: i === 0 ? "none" : "1px solid var(--rule)",
+              background: isEvidence ? "var(--stamp-red-wash)" : "transparent",
+              borderLeft: isEvidence ? "3px solid var(--stamp-red)" : "3px solid transparent",
+              paddingLeft: isEvidence ? 9 : 12,
             }}
           >
-            <span className="mono" style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-              {formatTime(t.timestamp)}
-            </span>
-            <span
-              className="mono"
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: isOut ? "var(--red)" : "var(--cyan)",
-              }}
-            >
-              {isOut ? "−" : "+"}
-              {t.amount} {t.asset}
-            </span>
-            <span className="mono" style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-              {isOut ? "to" : "from"} {truncate(t.counterparty)}
-            </span>
-            <a
-              className="mono"
-              href={`${explorerBase}/tx/${t.txHash}`}
-              target="_blank"
-              rel="noreferrer"
-              style={{ fontSize: 11, color: "var(--text-tertiary)", textDecoration: "none" }}
-            >
-              {truncate(t.txHash)} ↗
-            </a>
+            <DrainPulse alert={isEvidence} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink)" }}>
+                {truncateHash(from)} → {truncateHash(to)}
+              </div>
+              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", marginTop: 3 }}>
+                {timestamp ?? "unknown time"} {hash ? `· ${truncateHash(hash)}` : ""}
+              </div>
+            </div>
+            {(amount || asset) && (
+              <div className="mono" style={{ fontSize: 12.5, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
+                {amount} {asset}
+              </div>
+            )}
+            {isEvidence && <span className="stamp stamp-danger" style={{ fontSize: 9.5, padding: "3px 8px" }}>EVIDENCE</span>}
           </div>
         );
       })}

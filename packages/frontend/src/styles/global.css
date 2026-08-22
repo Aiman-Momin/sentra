@@ -1,73 +1,299 @@
+@import url("https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+/* ------------------------------------------------------------------ */
+/* SENTRA — "case file" design system                                  */
+/* Forensic intake report, not a cyber dashboard: stone paper, ink,    */
+/* rubber-stamp verdicts, folder-tab navigation.                       */
+/* ------------------------------------------------------------------ */
+
 :root {
-  /* --- palette: security-console graphite, not pure black --- */
-  --bg-0: #0d1117;      /* page base */
-  --bg-1: #131a23;      /* panel */
-  --bg-2: #1a2330;      /* raised panel / hover */
-  --line: #263140;      /* hairline borders */
-  --line-bright: #34445a;
+  --paper: #ECEAE2;
+  --paper-raised: #F5F3EC;
+  --paper-shade: #E2DFD3;
 
-  --text-primary: #e6edf3;
-  --text-secondary: #8b98a9;
-  --text-tertiary: #5c6b7d;
+  --ink: #201E19;
+  --ink-soft: #55524A;
+  --ink-faint: #8B8779;
 
-  /* scan / normal state */
-  --cyan: #4fd1e8;
-  --cyan-dim: #1e5a66;
+  --rule: #D3D0C3;
+  --rule-strong: #B8B4A4;
 
-  /* risk escalation ramp */
-  --amber: #e8a94f;
-  --red: #f0495b;
-  --red-dim: #3a1620;
+  /* verdict inks — muted stamp colors, never neon */
+  --stamp-red: #A5342A;
+  --stamp-red-wash: rgba(165, 52, 42, 0.08);
+  --stamp-green: #2E5C46;
+  --stamp-green-wash: rgba(46, 92, 70, 0.08);
+  --stamp-amber: #96631E;
+  --stamp-amber-wash: rgba(150, 99, 30, 0.08);
 
-  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Zilla Slab", "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg-0);
-  color: var(--text-primary);
-  font-family: var(--font-ui);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  background-image: radial-gradient(circle at 15% 0%, rgba(79, 209, 232, 0.05), transparent 40%);
+  /* faint paper fiber — two offset noise-like dot layers, not a glowing grid */
+  background-image:
+    radial-gradient(var(--rule) 0.6px, transparent 0.6px),
+    radial-gradient(var(--rule) 0.6px, transparent 0.6px);
+  background-size: 3px 3px, 3px 3px;
+  background-position: 0 0, 1.5px 1.5px;
+  background-blend-mode: multiply;
+  background-attachment: fixed;
 }
 
-button {
-  font-family: inherit;
-}
+button { font-family: inherit; }
+a { color: inherit; }
 
-a {
-  color: inherit;
-}
-
-::selection {
-  background: var(--cyan-dim);
-  color: var(--text-primary);
-}
+::selection { background: var(--stamp-amber-wash); color: var(--ink); }
 
 :focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
-.mono {
+.mono { font-family: var(--font-mono); }
+
+button, input, select { font: inherit; }
+button:disabled { opacity: 0.5; }
+
+/* ------------------------------------------------------------------ */
+/* App shell — folder-tab strip, not a sidebar dashboard                */
+/* ------------------------------------------------------------------ */
+
+.app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-topbar {
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 0 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cf-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 14px;
+  width: 100%;
+}
+
+.app-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.app-brand-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  border: 1.5px solid var(--ink);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  transform: rotate(-4deg);
+}
+
+.app-brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.03em;
+}
+
+.app-brand-sub {
   font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+}
+
+.cf-tabs {
+  display: flex;
+  gap: 2px;
+  padding-left: 6px;
+}
+
+.cf-tab {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 10px 18px 12px;
+  border: 1.5px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  top: 2px;
+}
+
+.cf-tab:hover { color: var(--ink); }
+
+.cf-tab-active {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.app-main { flex: 1; display: flex; flex-direction: column; }
+
+.app-content {
+  width: min(100%, 900px);
+  padding: 44px 32px 60px;
+  flex: 1;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* Page heading — case-file docket header                              */
+/* ------------------------------------------------------------------ */
+
+.page-heading {
+  padding-bottom: 22px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 26px;
+}
+
+.page-heading-ref {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+
+.page-heading h1 {
+  font-family: var(--font-display);
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel — a sheet of paper lifted off the desk                        */
+/* ------------------------------------------------------------------ */
+
+.ui-panel {
+  background: var(--paper-raised);
+  border: 1.5px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--rule-strong);
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Controls                                                             */
+/* ------------------------------------------------------------------ */
+
+.ui-control {
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.ui-control:hover { border-color: var(--ink) !important; }
+.ui-control:focus {
+  border-color: var(--ink) !important;
+  outline: none;
+  box-shadow: 2px 2px 0 var(--stamp-amber);
+}
+
+.ui-primary-button {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.ui-primary-button:not(:disabled):hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ui-primary-button:not(:disabled):active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Stamp — the signature verdict element                               */
+/* ------------------------------------------------------------------ */
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border: 2.5px solid currentColor;
+  border-radius: 3px;
+  transform: rotate(-3deg);
+  animation: stampDown 260ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.stamp-danger { color: var(--stamp-red); background: var(--stamp-red-wash); }
+.stamp-safe { color: var(--stamp-green); background: var(--stamp-green-wash); }
+.stamp-caution { color: var(--stamp-amber); background: var(--stamp-amber-wash); }
+
+@keyframes stampDown {
+  0% { opacity: 0; transform: rotate(-3deg) scale(1.6) translateY(-6px); }
+  70% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(-3deg) scale(1) translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  .stamp { animation: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Drain pulse — small EKG-style line, the one recurring data motif    */
+/* ------------------------------------------------------------------ */
+
+.pulse-line { display: block; overflow: visible; }
+.pulse-line path {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ------------------------------------------------------------------ */
+/* Checklist item — used for detection signals, evidence rows           */
+/* ------------------------------------------------------------------ */
+
+.cf-check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ink);
+  flex: none;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+}
+.cf-check svg { display: block; }
+
+@media (max-width: 720px) {
+  .cf-topbar { padding: 0 16px; flex-direction: column; align-items: stretch; }
+  .cf-brand-row { padding: 16px 0 10px; }
+  .cf-tabs { padding-left: 0; }
+  .app-content { padding: 28px 18px 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;

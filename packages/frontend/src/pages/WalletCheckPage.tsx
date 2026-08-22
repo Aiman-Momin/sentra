@@ -3,6 +3,7 @@ import { api, ApiError, type RiskResult, type TransferCheckResult } from "../api
 import { AddressInput, NetworkSelect, Panel, PrimaryButton } from "../components/Shell";
 import { RiskGauge, RiskLevelBadge } from "../components/RiskGauge";
 import { Timeline } from "../components/Timeline";
+import { EmptyState } from "../components/EmptyState";
 
 /**
  * One screen for "is this wallet safe" — with an optional section for
@@ -60,10 +61,11 @@ export function WalletCheckPage() {
   const blocked = transferResult?.decision === "BLOCK";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Wallet Check</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 13.5, marginTop: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div className="page-heading">
+        <div className="page-heading-ref">DOCKET — WALLET INTAKE</div>
+        <h1 style={{ fontSize: 23, fontWeight: 700, margin: 0 }}>Wallet Check</h1>
+        <p style={{ color: "var(--ink-soft)", fontSize: 13.5, marginTop: 8, maxWidth: 520, lineHeight: 1.6 }}>
           Is this wallet safe to receive your funds? Sentra reads its real on-chain history and looks for
           sweeper-bot behavior before you send.
         </p>
@@ -73,9 +75,13 @@ export function WalletCheckPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <AddressInput value={address} onChange={setAddress} placeholder="Recipient wallet address (0x...)" />
+              <Field label="Recipient wallet">
+                <AddressInput value={address} onChange={setAddress} placeholder="0x... wallet to check" />
+              </Field>
             </div>
-            <NetworkSelect value={network} onChange={setNetwork} />
+            <Field label="Network">
+              <NetworkSelect value={network} onChange={setNetwork} />
+            </Field>
           </div>
 
           <button
@@ -83,15 +89,18 @@ export function WalletCheckPage() {
             style={{
               background: "transparent",
               border: "none",
-              color: "var(--cyan)",
-              fontSize: 12.5,
+              color: "var(--ink)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11.5,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
               cursor: "pointer",
               padding: 0,
               textAlign: "left",
               width: "fit-content",
             }}
           >
-            {showTransferDetails ? "− Hide transfer details" : "+ I'm about to send funds — add transfer details"}
+            {showTransferDetails ? "− HIDE TRANSFER DETAILS" : "+ I'M ABOUT TO SEND FUNDS — ADD TRANSFER DETAILS"}
           </button>
 
           {showTransferDetails && (
@@ -116,57 +125,57 @@ export function WalletCheckPage() {
 
           <div>
             <PrimaryButton onClick={runCheck} disabled={loading || address.trim().length === 0}>
-              {loading ? "Scanning…" : isTransferMode ? "Check Before Sending" : "Check Wallet"}
+              {loading ? "SCANNING…" : isTransferMode ? "CHECK BEFORE SENDING" : "CHECK WALLET"}
             </PrimaryButton>
           </div>
         </div>
       </Panel>
 
       {error && (
-        <Panel style={{ borderColor: "var(--red)", background: "var(--red-dim)" }}>
-          <div className="mono" style={{ fontSize: 13, color: "var(--red)" }}>
+        <Panel style={{ borderColor: "var(--stamp-red)", background: "var(--stamp-red-wash)", boxShadow: "3px 3px 0 var(--stamp-red)" }}>
+          <div className="mono" style={{ fontSize: 13, color: "var(--stamp-red)" }}>
             {error}
           </div>
         </Panel>
       )}
 
+      {!error && !risk && !loading && (
+        <EmptyState
+          icon={<span style={{ fontSize: 26, fontFamily: "var(--font-display)" }}>◎</span>}
+          title="No wallet checked yet"
+          description="Enter a Polygon address above to see its real on-chain risk score, evidence, and transaction timeline."
+        />
+      )}
+
       {risk && (
         <>
-          <Panel style={blocked ? { borderColor: "var(--red)", background: "var(--red-dim)" } : undefined}>
+          <Panel style={blocked ? { borderColor: "var(--stamp-red)", boxShadow: "3px 3px 0 var(--stamp-red)" } : undefined}>
             {transferResult ? (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color: blocked ? "var(--red)" : "var(--cyan)",
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    {blocked ? "DO NOT SEND" : "OK TO SEND"}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
+                  <span className={`stamp ${blocked ? "stamp-danger" : "stamp-safe"}`} style={{ fontSize: 15 }}>
+                    {blocked ? "Do not send" : "OK to send"}
                   </span>
                   <RiskLevelBadge level={risk.riskLevel} />
                 </div>
-                <div style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 10 }}>{risk.recommendation}</div>
-                <div className="mono" style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+                <div style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>{risk.recommendation}</div>
+                <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>
                   {transferResult.amount} {transferResult.asset} → {transferResult.recipientWallet}
                 </div>
               </>
             ) : (
-              <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 30, alignItems: "center", flexWrap: "wrap" }}>
                 <RiskGauge score={risk.riskScore} level={risk.riskLevel} />
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
                   <RiskLevelBadge level={risk.riskLevel} />
-                  <div className="mono" style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 10 }}>
+                  <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 10 }}>
                     {risk.address}
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginTop: 14, lineHeight: 1.5, fontFamily: "var(--font-display)" }}>
                     {risk.recommendation}
                   </div>
                   {risk.insufficientData && (
-                    <div style={{ fontSize: 12.5, color: "var(--text-tertiary)", marginTop: 8 }}>
+                    <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 8, lineHeight: 1.5 }}>
                       Sentra found no on-chain activity for this address in the scanned window — there isn't
                       enough history yet to assess risk. This is not the same as a clean bill of health.
                     </div>
@@ -178,26 +187,27 @@ export function WalletCheckPage() {
 
           {risk.signals.length > 0 && (
             <Panel>
-              <h2 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 14px", color: "var(--text-secondary)" }}>
-                EVIDENCE ({risk.signals.length} signal{risk.signals.length > 1 ? "s" : ""})
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <SectionHeading>
+                EVIDENCE — {risk.signals.length} signal{risk.signals.length > 1 ? "s" : ""}
+              </SectionHeading>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {risk.signals.map((s) => (
-                  <div key={s.id} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div key={s.id} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                     <span
                       className="mono"
                       style={{
-                        fontSize: 11,
-                        color: "var(--red)",
-                        border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)",
-                        borderRadius: 4,
+                        fontSize: 10.5,
+                        color: "var(--stamp-red)",
+                        border: "1px solid var(--stamp-red)",
+                        borderRadius: 3,
                         padding: "2px 6px",
                         whiteSpace: "nowrap",
+                        marginTop: 1,
                       }}
                     >
                       +{s.weight}
                     </span>
-                    <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>{s.description}</span>
+                    <span style={{ fontSize: 13.5, lineHeight: 1.55 }}>{s.description}</span>
                   </div>
                 ))}
               </div>
@@ -205,9 +215,7 @@ export function WalletCheckPage() {
           )}
 
           <Panel>
-            <h2 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 14px", color: "var(--text-secondary)" }}>
-              TRANSACTION TIMELINE
-            </h2>
+            <SectionHeading>Transaction Timeline</SectionHeading>
             <Timeline transfers={risk.timeline} network={risk.network} highlightTxHashes={allEvidence} />
           </Panel>
         </>
@@ -216,10 +224,33 @@ export function WalletCheckPage() {
   );
 }
 
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        margin: "0 0 16px",
+        color: "var(--ink-soft)",
+        fontFamily: "var(--font-mono)",
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        paddingBottom: 10,
+        borderBottom: "1px solid var(--rule)",
+      }}
+    >
+      {children}
+    </h2>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 11.5, color: "var(--text-tertiary)", letterSpacing: "0.04em" }}>
+      <span
+        className="mono"
+        style={{ fontSize: 10.5, color: "var(--ink-faint)", letterSpacing: "0.06em" }}
+      >
         {label.toUpperCase()}
       </span>
       {children}
