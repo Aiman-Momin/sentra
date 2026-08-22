@@ -1,0 +1,74 @@
+// Sentra database schema.
+// Stores: assessment history (for trend/alerting), monitored wallets, and alerts.
+// It does NOT store private keys, seed phrases, or anything custodial —
+// Sentra only ever persists publicly-observable chain data and derived scores.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RiskLevel {
+  NORMAL
+  SUSPICIOUS
+  HIGH_RISK
+  ACTIVE_SWEEPER_LIKELY
+}
+
+// One row per completed analysis. A wallet gets a new row every time it's
+// checked or re-checked by the monitoring job, so we can track score
+// history over time and detect "risk score increased" alerts.
+model RiskAssessment {
+  id            String    @id @default(cuid())
+  address       String
+  network       String
+  riskScore     Int
+  riskLevel     RiskLevel
+  recommendation String
+  // raw signal + timeline JSON from the detection engine, kept verbatim
+  // so the API/UI can render full evidence without recomputation
+  signals       Json
+  timeline      Json
+  insufficientData Boolean @default(false)
+  analyzedAt    DateTime  @default(now())
+
+  @@index([address, network, analyzedAt])
+}
+
+model MonitoredWallet {
+  id          String   @id @default(cuid())
+  address     String
+  network     String
+  label       String?
+  createdAt   DateTime @default(now())
+  lastCheckedAt DateTime?
+  lastRiskScore Int?
+  lastRiskLevel RiskLevel?
+  alerts      Alert[]
+
+  @@unique([address, network])
+}
+
+enum AlertType {
+  FAST_DRAIN_DETECTED
+  RISK_SCORE_INCREASED
+  NEW_REPEATED_DESTINATION
+}
+
+model Alert {
+  id                String          @id @default(cuid())
+  monitoredWallet   MonitoredWallet @relation(fields: [monitoredWalletId], references: [id])
+  monitoredWalletId String
+  type              AlertType
+  message           String
+  previousScore     Int?
+  newScore          Int?
+  createdAt         DateTime        @default(now())
+  acknowledgedAt    DateTime?
+
+  @@index([monitoredWalletId, createdAt])
+}

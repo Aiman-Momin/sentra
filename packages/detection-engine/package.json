@@ -1,0 +1,17 @@
+{
+  "name": "@sentra/detection-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/engine.js",
+  "types": "dist/engine.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "sentra",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/detection-engine",
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "test:engine": "npm run test --workspace=@sentra/detection-engine",
+    "dev:backend": "npm run dev --workspace=@sentra/backend",
+    "dev:frontend": "npm run dev --workspace=sentra-frontend"
+  }
+}

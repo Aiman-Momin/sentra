@@ -1,0 +1,75 @@
+:root {
+  /* --- palette: security-console graphite, not pure black --- */
+  --bg-0: #0d1117;      /* page base */
+  --bg-1: #131a23;      /* panel */
+  --bg-2: #1a2330;      /* raised panel / hover */
+  --line: #263140;      /* hairline borders */
+  --line-bright: #34445a;
+
+  --text-primary: #e6edf3;
+  --text-secondary: #8b98a9;
+  --text-tertiary: #5c6b7d;
+
+  /* scan / normal state */
+  --cyan: #4fd1e8;
+  --cyan-dim: #1e5a66;
+
+  /* risk escalation ramp */
+  --amber: #e8a94f;
+  --red: #f0495b;
+  --red-dim: #3a1620;
+
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(circle at 15% 0%, rgba(79, 209, 232, 0.05), transparent 40%);
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--cyan-dim);
+  color: var(--text-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
