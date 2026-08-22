@@ -7,24 +7,24 @@
 /* ------------------------------------------------------------------ */
 
 :root {
-  --paper: #ECEAE2;
-  --paper-raised: #F5F3EC;
-  --paper-shade: #E2DFD3;
+  --paper: #080A0D;
+  --paper-raised: #101318;
+  --paper-shade: #171B21;
 
-  --ink: #201E19;
-  --ink-soft: #55524A;
-  --ink-faint: #8B8779;
+  --ink: #F2F4F7;
+  --ink-soft: #8B949E;
+  --ink-faint: #68727D;
 
-  --rule: #D3D0C3;
-  --rule-strong: #B8B4A4;
+  --rule: #252B33;
+  --rule-strong: #38414C;
 
-  /* verdict inks — muted stamp colors, never neon */
-  --stamp-red: #A5342A;
-  --stamp-red-wash: rgba(165, 52, 42, 0.08);
-  --stamp-green: #2E5C46;
-  --stamp-green-wash: rgba(46, 92, 70, 0.08);
-  --stamp-amber: #96631E;
-  --stamp-amber-wash: rgba(150, 99, 30, 0.08);
+  --accent: #6C7BFF;
+  --stamp-red: #EF5B5B;
+  --stamp-red-wash: rgba(239, 91, 91, 0.12);
+  --stamp-green: #35C98A;
+  --stamp-green-wash: rgba(53, 201, 138, 0.12);
+  --stamp-amber: #E5A93D;
+  --stamp-amber-wash: rgba(229, 169, 61, 0.12);
 
   --font-display: "Zilla Slab", "Iowan Old Style", Georgia, serif;
   --font-body: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -41,23 +41,20 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  /* faint paper fiber — two offset noise-like dot layers, not a glowing grid */
   background-image:
-    radial-gradient(var(--rule) 0.6px, transparent 0.6px),
-    radial-gradient(var(--rule) 0.6px, transparent 0.6px);
-  background-size: 3px 3px, 3px 3px;
-  background-position: 0 0, 1.5px 1.5px;
-  background-blend-mode: multiply;
+    linear-gradient(rgba(242, 244, 247, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 244, 247, 0.018) 1px, transparent 1px);
+  background-size: 48px 48px;
   background-attachment: fixed;
 }
 
 button { font-family: inherit; }
 a { color: inherit; }
 
-::selection { background: var(--stamp-amber-wash); color: var(--ink); }
+::selection { background: rgba(108, 123, 255, 0.3); color: var(--ink); }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -152,7 +149,7 @@ button:disabled { opacity: 0.5; }
 .cf-tab-active {
   color: var(--ink);
   background: var(--paper-raised);
-  border-color: var(--ink);
+  border-color: var(--accent);
   font-weight: 600;
 }
 
@@ -207,22 +204,22 @@ button:disabled { opacity: 0.5; }
 }
 .ui-control:hover { border-color: var(--ink) !important; }
 .ui-control:focus {
-  border-color: var(--ink) !important;
+  border-color: var(--accent) !important;
   outline: none;
-  box-shadow: 2px 2px 0 var(--stamp-amber);
+  box-shadow: 0 0 0 3px rgba(108, 123, 255, 0.18);
 }
 
 .ui-primary-button {
   transition: transform 120ms ease, box-shadow 120ms ease;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 #050608;
 }
 .ui-primary-button:not(:disabled):hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 4px 4px 0 #050608;
 }
 .ui-primary-button:not(:disabled):active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--ink);
+  box-shadow: 1px 1px 0 #050608;
 }
 
 /* ------------------------------------------------------------------ */

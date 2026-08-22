@@ -115,9 +115,9 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: disabled ? "var(--paper-shade)" : "var(--ink)",
-        color: disabled ? "var(--ink-faint)" : "var(--paper)",
-        border: "1.5px solid var(--ink)",
+        background: disabled ? "var(--paper-shade)" : "var(--accent)",
+        color: disabled ? "var(--ink-faint)" : "var(--ink)",
+        border: "1.5px solid var(--accent)",
         borderRadius: 2,
         padding: "10.5px 20px",
         fontSize: 13,

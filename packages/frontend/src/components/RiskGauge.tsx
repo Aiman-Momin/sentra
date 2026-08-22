@@ -5,7 +5,13 @@
  * "CRITICAL", or "low" | "medium" | "high"). Adjust the buckets below if
  * your real union has different tiers.
  */
-function toneFor(level: string): "safe" | "caution" | "danger" {
+function toneFor(level: string, score?: number): "safe" | "caution" | "danger" {
+  if (score !== undefined) {
+    if (score > 70) return "danger";
+    if (score > 50) return "caution";
+    return "safe";
+  }
+
   const l = level.toLowerCase();
   if (l.includes("crit") || l.includes("high")) return "danger";
   if (l.includes("med") || l.includes("caution") || l.includes("moderate")) return "caution";
@@ -19,7 +25,7 @@ const TONE_COLOR: Record<string, string> = {
 };
 
 export function RiskGauge({ score, level }: { score: number; level: string }) {
-  const tone = toneFor(level);
+  const tone = toneFor(level, score);
   const color = TONE_COLOR[tone];
   const clamped = Math.max(0, Math.min(100, score));
 
@@ -75,7 +81,7 @@ export function RiskGauge({ score, level }: { score: number; level: string }) {
           justifyContent: "center",
         }}
       >
-        <div className="mono" style={{ fontSize: 26, fontWeight: 600, color: "var(--ink)", lineHeight: 1 }}>
+        <div className="mono" style={{ fontSize: 26, fontWeight: 600, color, lineHeight: 1 }}>
           {clamped}
         </div>
         <div className="mono" style={{ fontSize: 9.5, color: "var(--ink-faint)", marginTop: 3, letterSpacing: "0.06em" }}>
@@ -86,8 +92,8 @@ export function RiskGauge({ score, level }: { score: number; level: string }) {
   );
 }
 
-export function RiskLevelBadge({ level }: { level: string }) {
-  const tone = toneFor(level);
+export function RiskLevelBadge({ level, score }: { level: string; score?: number }) {
+  const tone = toneFor(level, score);
   const stampClass = tone === "danger" ? "stamp-danger" : tone === "caution" ? "stamp-caution" : "stamp-safe";
   return <span className={`stamp ${stampClass}`}>{level}</span>;
 }

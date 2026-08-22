@@ -156,7 +156,7 @@ export function WalletCheckPage() {
                   <span className={`stamp ${blocked ? "stamp-danger" : "stamp-safe"}`} style={{ fontSize: 15 }}>
                     {blocked ? "Do not send" : "OK to send"}
                   </span>
-                  <RiskLevelBadge level={risk.riskLevel} />
+                  <RiskLevelBadge level={risk.riskLevel} score={risk.riskScore} />
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>{risk.recommendation}</div>
                 <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>
@@ -167,7 +167,7 @@ export function WalletCheckPage() {
               <div style={{ display: "flex", gap: 30, alignItems: "center", flexWrap: "wrap" }}>
                 <RiskGauge score={risk.riskScore} level={risk.riskLevel} />
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <RiskLevelBadge level={risk.riskLevel} />
+                  <RiskLevelBadge level={risk.riskLevel} score={risk.riskScore} />
                   <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 10 }}>
                     {risk.address}
                   </div>
