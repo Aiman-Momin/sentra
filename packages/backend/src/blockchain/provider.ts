@@ -210,7 +210,7 @@ async function fetchViaAlchemy(
   const knownTokens = loadKnownTokensFromEnv(config.key);
   const tokensByAddress = new Map(knownTokens.map((t) => [t.address.toLowerCase(), t]));
 
-  const categories = ["external", "erc20"];
+  const categories = ["external", "internal", "erc20"];
   const [incoming, outgoing] = await Promise.all([
     fetchAssetTransfersPage(provider, {
       toAddress: address,
