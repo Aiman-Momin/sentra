@@ -105,6 +105,20 @@ function jaccard(a: string[], b: string[]): number {
   return union === 0 ? 0 : intersection / union;
 }
 
+function hourSimilarity(hours: number[], fingerprintHours: number[]): number {
+  if (hours.length === 0 || fingerprintHours.length === 0) return 0;
+  const scores = hours.map((hour) => {
+    const nearestDistance = Math.min(
+      ...fingerprintHours.map((candidate) => {
+        const distance = Math.abs(hour - candidate);
+        return Math.min(distance, 24 - distance);
+      })
+    );
+    return 1 - Math.min(1, nearestDistance / 12);
+  });
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+}
+
 interface FingerprintAggregate {
   avgDrainDelaySeconds: number;
   avgDrainPercentage: number;
@@ -123,12 +137,9 @@ function similarity(fv: FeatureVector, fp: FingerprintAggregate): number {
   const delayScore = 1 - Math.min(1, Math.abs(fv.avgDrainDelaySeconds - fp.avgDrainDelaySeconds) / 60);
   const pctScore = 1 - Math.min(1, Math.abs(fv.avgDrainPercentage - fp.avgDrainPercentage) / 20);
   const assetScore = jaccard(fv.assets, fp.preferredAssets as string[]);
-  const gasScore = (fv.gasFunded ? 1 : 0) === Math.round(fp.gasFundingRatio) ? 1 : 0.3;
-  const hourScore = jaccard(
-    fv.hoursUtc.map(String),
-    (fp.activeHoursUtc as number[]).map(String)
-  );
-  return 0.3 * delayScore + 0.2 * pctScore + 0.2 * assetScore + 0.15 * gasScore + 0.15 * hourScore;
+  const gasScore = 1 - Math.abs((fv.gasFunded ? 1 : 0) - fp.gasFundingRatio);
+  const hourScore = hourSimilarity(fv.hoursUtc, fp.activeHoursUtc as number[]);
+  return 0.35 * delayScore + 0.25 * pctScore + 0.25 * assetScore + 0.1 * gasScore + 0.05 * hourScore;
 }
 
 async function nextLabel(): Promise<string> {
