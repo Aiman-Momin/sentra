@@ -52,6 +52,8 @@ export function WalletCheckPage() {
       try {
         const res = await api.checkRecipient(linkedAddress, linkedNetwork);
         setResult(res);
+        setFeedbackStatus(res.fingerprint?.confirmed ? "submitted" : "idle");
+        setFeedbackVerdict(res.fingerprint?.confirmed ? "CONFIRMED_SWEEPER" : null);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Something went wrong reaching Sentra's API.");
       } finally {
@@ -80,9 +82,13 @@ export function WalletCheckPage() {
           amount: amount.trim(),
         });
         setTransferResult(res);
+        setFeedbackStatus(res.risk.fingerprint?.confirmed ? "submitted" : "idle");
+        setFeedbackVerdict(res.risk.fingerprint?.confirmed ? "CONFIRMED_SWEEPER" : null);
       } else {
         const res = await api.checkRecipient(address.trim(), network);
         setResult(res);
+        setFeedbackStatus(res.fingerprint?.confirmed ? "submitted" : "idle");
+        setFeedbackVerdict(res.fingerprint?.confirmed ? "CONFIRMED_SWEEPER" : null);
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong reaching Sentra's API.");

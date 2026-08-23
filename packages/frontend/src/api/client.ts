@@ -24,6 +24,7 @@ export interface FingerprintMatch {
   similarity: number;
   victimCount: number;
   isNewFingerprint: boolean;
+  confirmed: boolean;
 }
 
 export interface RiskResult {

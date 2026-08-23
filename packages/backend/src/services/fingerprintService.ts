@@ -153,6 +153,7 @@ export interface FingerprintMatchResult {
   similarity: number;
   victimCount: number;
   isNewFingerprint: boolean;
+  confirmed: boolean;
 }
 
 /**
@@ -231,7 +232,7 @@ export async function fingerprintAssessment(
     isNewFingerprint = true;
   }
 
-  await prisma.sweeperFingerprintMatch.upsert({
+  const match = await prisma.sweeperFingerprintMatch.upsert({
     where: {
       fingerprintId_address_network: {
         fingerprintId: fingerprint.id,
@@ -263,6 +264,7 @@ export async function fingerprintAssessment(
     similarity: best ? best.score : 1,
     victimCount,
     isNewFingerprint,
+    confirmed: match.confirmed,
   };
 }
 
