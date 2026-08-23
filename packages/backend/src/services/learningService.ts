@@ -75,8 +75,12 @@ export async function learnFromAssessment(result: RiskResult): Promise<void> {
     destinationCounts.set(addr, (destinationCounts.get(addr) ?? 0) + 1);
   }
 
+  let learnedCount = 0;
   for (const [address, count] of destinationCounts) {
-    if (count < AUTO_LEARN_MIN_DESTINATION_OCCURRENCES) continue;
+    if (count < AUTO_LEARN_MIN_DESTINATION_OCCURRENCES) {
+      console.log(`[learning] [${result.network}] address ${address} has ${count} occurrences (min required: ${AUTO_LEARN_MIN_DESTINATION_OCCURRENCES}), skipping`);
+      continue;
+    }
 
     const existing = await prisma.knownAddress.findUnique({
       where: { address_network: { address, network: result.network } },
@@ -85,18 +89,24 @@ export async function learnFromAssessment(result: RiskResult): Promise<void> {
     // A manually-verified-safe address is never overwritten by
     // auto-learning, even if this specific assessment looked risky —
     // a human's explicit judgment takes precedence over the heuristic.
-    if (existing?.source === "MANUAL") continue;
+    if (existing?.source === "MANUAL") {
+      console.log(`[learning] [${result.network}] address ${address} already manually classified as ${existing.classification}, skipping`);
+      continue;
+    }
 
     if (existing) {
+      const newConfidence = Math.min(AUTO_LEARN_MAX_CONFIDENCE, existing.confidence + AUTO_LEARN_CONFIDENCE_INCREMENT);
+      console.log(`[learning] [${result.network}] updating ${address} confidence: ${existing.confidence.toFixed(2)} -> ${newConfidence.toFixed(2)}`);
       await prisma.knownAddress.update({
         where: { id: existing.id },
         data: {
           classification: "SWEEPER_DESTINATION",
           occurrenceCount: { increment: 1 },
-          confidence: Math.min(AUTO_LEARN_MAX_CONFIDENCE, existing.confidence + AUTO_LEARN_CONFIDENCE_INCREMENT),
+          confidence: newConfidence,
         },
       });
     } else {
+      console.log(`[learning] [${result.network}] learning new sweeper destination: ${address} (${count} occurrences)`);
       await prisma.knownAddress.create({
         data: {
           address,

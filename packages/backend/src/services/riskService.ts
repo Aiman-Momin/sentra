@@ -36,7 +36,17 @@ export interface RiskResultWithId extends RiskResult {
 export async function checkWallet(address: string, network: string): Promise<RiskResultWithId> {
   const activity = await fetchWalletActivity(address, network);
   const context = await getDetectionContext(network);
+  
+  console.log(`[risk] [${network}] checking ${address}`);
+  console.log(`[risk] [${network}] detection context: ${context.knownSweeperDestinations?.size ?? 0} known sweeper destinations, ${context.verifiedSafeAddresses?.size ?? 0} verified safe`);
+  console.log(`[risk] [${network}] wallet activity: ${activity.transfers.length} transfers`);
+  
   const result = analyzeWallet(activity, context);
+  
+  console.log(`[risk] [${network}] result: score=${result.riskScore}, level=${result.riskLevel}, signals=${result.signals.length}`);
+  for (const signal of result.signals) {
+    console.log(`[risk] [${network}]   - ${signal.id} (weight=${signal.weight}, evidence=${signal.evidenceTxHashes.length} txs)`);
+  }
 
   const created = await prisma.riskAssessment.create({
     data: {
