@@ -158,66 +158,7 @@ guessing.
 
 ---
 
-## Setup Instructions
 
-### Prerequisites
-- Node.js 20+ (Node 22 recommended — the test script uses the native
-  `--env-file` flag, available from Node 20.6)
-- A PostgreSQL database (local via Docker/native install, or hosted)
-- An [Alchemy](https://www.alchemy.com/) account with a Polygon Mainnet
-  (and optionally Amoy Testnet) app created, for a real RPC URL
-
-### 1. Install dependencies
-```bash
-npm install
-```
-
-### 2. Configure the backend
-```bash
-cp packages/backend/.env.example packages/backend/.env
-```
-Edit `packages/backend/.env` and set:
-- `DATABASE_URL` — your Postgres connection string
-- `SENTRA_RPC_POLYGON_MAINNET` — your real Alchemy Polygon Mainnet URL
-- `SENTRA_RPC_POLYGON_AMOY` — (optional) your Alchemy Amoy Testnet URL
-
-### 3. Set up the database
-```bash
-cd packages/backend
-npx prisma generate
-npx prisma migrate dev --name init
-```
-
-### 4. Build the detection engine
-The backend imports the engine's compiled output, so build it first
-(and any time you change its source):
-```bash
-cd packages/detection-engine
-npm run build
-```
-
-### 5. Run it
-```bash
-# Terminal 1 — backend
-cd packages/backend
-npm run dev            # API on :4000
-
-# Terminal 2 — frontend
-cd packages/frontend
-npm run dev            # UI on :5173
-```
-
-Open `http://localhost:5173`.
-
-### 6. Run the test suite
-```bash
-npm run test:engine    # 9/9 detection engine unit tests
-```
-
-
-`.gitignore`, but always run `git status` before committing to confirm.
-
----
 
 ## Deployment
 
@@ -232,7 +173,29 @@ Sentra deploys as two separate services:
   configuration and the frontend code doesn't need environment-specific
   API base URLs.
 
+**Note on Render's free tier:** free web services spin down after 15
+minutes of inactivity. This breaks the monitoring cron job's schedule
+unless something pings the service periodically (e.g. an uptime
+monitor hitting `/api/health`), or the service is upgraded to a paid,
+always-on tier.
 
+---
+
+## Security Notes
+
+- Sentra **never** asks for seed phrases, private keys, or wallet
+  passwords, and never has custody of funds.
+- `.env` files (real secrets) are excluded via `.gitignore` — always
+  confirm with `git status` before committing, especially after adding
+  new env files.
+- If a secret is ever accidentally committed and pushed, treat it as
+  compromised immediately: rotate the RPC API key and database
+  credentials, and start the git history over rather than trying to
+  scrub it after the fact.
+- The public API (`/api/check-recipient` etc.) currently has no
+  authentication or rate limiting — fine for local development and
+  personal use, but add an API key / rate limit before exposing it to
+  third-party integrations.
 
 ---
 
