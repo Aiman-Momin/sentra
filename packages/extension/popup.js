@@ -23,10 +23,6 @@ const apiBaseUrlInput = document.getElementById("api-base-url");
 const webappUrlInput = document.getElementById("webapp-url");
 const saveSettingsBtn = document.getElementById("save-settings");
 
-function truncate(addr) {
-  return addr.length > 14 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr;
-}
-
 function setStatus(text) {
   statusEl.textContent = text;
 }
@@ -37,6 +33,16 @@ async function getSettings() {
     apiBaseUrl: stored.apiBaseUrl || DEFAULT_API_BASE_URL,
     webappUrl: stored.webappUrl || DEFAULT_WEBAPP_URL,
   };
+}
+
+/**
+ * Deterministic short "case file" reference derived from the address —
+ * cosmetic only, purely to match the web app's dossier styling. Not
+ * stored anywhere, not meaningful beyond this popup.
+ */
+function caseFileRef(address) {
+  const tail = address.slice(-4).toUpperCase();
+  return `SNT-${tail}`;
 }
 
 /**
@@ -102,45 +108,100 @@ function renderEmpty(message) {
   resultsEl.innerHTML = `<div class="empty">${message}</div>`;
 }
 
-function renderResultCard(address, webappUrl, network) {
+/** Initial "pending" state — the checklist reads as still-in-progress. */
+function renderResultCard(address, network) {
   const card = document.createElement("div");
-  card.className = "result-card";
+  card.className = "case-file";
+  card.id = `case-${address}`;
   card.innerHTML = `
-    <div class="result-address">${address}</div>
-    <div class="result-row">
-      <span class="badge" id="badge-${address}">Checking…</span>
-      <span class="score" id="score-${address}"></span>
+    <span class="paperclip">📎</span>
+    <div class="case-file-header">
+      <span class="case-file-id mono">CASE FILE NO. ${caseFileRef(address)}</span>
+      <span class="case-file-network mono">${network === "polygon-mainnet" ? "POLYGON" : "AMOY"}</span>
     </div>
-    <a class="view-report" href="${webappUrl}/?address=${address}&network=${network}" target="_blank" id="link-${address}">
-      View full report →
-    </a>
+    <div class="case-file-label">SUBJECT ADDRESS</div>
+    <div class="case-file-address">${address}</div>
+    <div class="checklist">
+      <div class="checklist-item"><span class="checkbox spinning">·</span> Reading on-chain history</div>
+      <div class="checklist-item"><span class="checkbox spinning">·</span> Checking detection signals</div>
+    </div>
+    <div class="verdict-row">
+      <span class="stamp stamp-pending">SCANNING</span>
+      <span class="score"></span>
+    </div>
+    <div class="findings findings-empty" id="findings-${address}">Awaiting result…</div>
   `;
   resultsEl.appendChild(card);
 }
 
+function stampFor(riskLevel) {
+  switch (riskLevel) {
+    case "ACTIVE_SWEEPER_LIKELY":
+      return { text: "DO NOT SEND", cls: "stamp-flagged" };
+    case "HIGH_RISK":
+      return { text: "FLAGGED", cls: "stamp-flagged" };
+    case "SUSPICIOUS":
+      return { text: "CAUTION", cls: "stamp-caution" };
+    default:
+      return { text: "CLEARED", cls: "stamp-cleared" };
+  }
+}
+
 function updateResultCard(address, result, error) {
-  const badge = document.getElementById(`badge-${address}`);
-  const score = document.getElementById(`score-${address}`);
-  if (!badge) return;
+  const card = document.getElementById(`case-${address}`);
+  if (!card) return;
+
+  const checkboxes = card.querySelectorAll(".checkbox");
+  const verdictRow = card.querySelector(".verdict-row");
+  const findingsEl = document.getElementById(`findings-${address}`);
 
   if (error) {
-    badge.textContent = "Check failed";
-    badge.className = "badge badge-error";
-    score.textContent = "";
+    checkboxes.forEach((cb) => {
+      cb.className = "checkbox";
+      cb.textContent = "!";
+    });
+    verdictRow.innerHTML = `<span class="stamp stamp-pending">ERROR</span><span class="score"></span>`;
+    findingsEl.className = "findings findings-empty";
+    findingsEl.textContent = error.message || "Could not reach Sentra.";
     return;
   }
+
+  checkboxes.forEach((cb) => {
+    cb.className = "checkbox checked";
+    cb.textContent = "✓";
+  });
+
+  const stamp = stampFor(result.riskLevel);
+  verdictRow.innerHTML = `
+    <span class="stamp ${stamp.cls}">${stamp.text}</span>
+    <span class="score">${result.riskScore}<span class="score-max">/100</span></span>
+  `;
 
   if (result.insufficientData) {
-    badge.textContent = "No history";
-    badge.className = "badge badge-normal";
-    score.textContent = "";
-    return;
+    findingsEl.className = "findings findings-empty";
+    findingsEl.textContent = "No on-chain history found in the scanned window.";
+  } else if (result.signals.length === 0) {
+    findingsEl.className = "findings findings-empty";
+    findingsEl.textContent = "No sweeper-bot signals detected.";
+  } else {
+    findingsEl.className = "findings";
+    let html = result.signals.map((s) => `· ${s.description}`).join("<br/>");
+    if (result.fingerprint && !result.fingerprint.isNewFingerprint) {
+      html += `<br/><br/><strong style="color:var(--stamp-red)">PATTERN ${result.fingerprint.label}</strong> — seen across ${result.fingerprint.victimCount} wallets`;
+    }
+    findingsEl.innerHTML = html;
   }
+}
 
-  const levelClass = result.riskLevel.toLowerCase();
-  badge.textContent = result.riskLevel.replace(/_/g, " ");
-  badge.className = `badge badge-${levelClass}`;
-  score.textContent = `${result.riskScore}/100`;
+function addViewReportLink(address, network, webappUrl) {
+  const card = document.getElementById(`case-${address}`);
+  if (!card) return;
+  const link = document.createElement("a");
+  link.className = "view-report";
+  link.href = `${webappUrl}/?address=${address}&network=${network}`;
+  link.target = "_blank";
+  link.textContent = "VIEW FULL REPORT →";
+  card.appendChild(link);
 }
 
 async function runScan() {
@@ -163,7 +224,7 @@ async function runScan() {
     setStatus(`Found ${addresses.length} address${addresses.length > 1 ? "es" : ""} — checking with Sentra…`);
 
     for (const address of addresses) {
-      renderResultCard(address, webappUrl, network);
+      renderResultCard(address, network);
     }
 
     // Check concurrently, but update each card as its own result lands —
@@ -173,6 +234,7 @@ async function runScan() {
         try {
           const result = await checkAddress(apiBaseUrl, address, network);
           updateResultCard(address, result, null);
+          addViewReportLink(address, network, webappUrl);
         } catch (err) {
           updateResultCard(address, null, err);
         }
@@ -210,4 +272,4 @@ saveSettingsBtn.addEventListener("click", async () => {
 scanBtn.addEventListener("click", runScan);
 
 initSettingsPanel();
-renderEmpty("Click \"Scan This Page\" to check any wallet addresses on it.");
+renderEmpty("Click \u201cScan This Page\u201d to check any wallet addresses on it.");

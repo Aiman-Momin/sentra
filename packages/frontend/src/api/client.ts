@@ -18,6 +18,14 @@ export interface RiskSignal {
   evidenceTxHashes: string[];
 }
 
+export interface FingerprintMatch {
+  fingerprintId: string;
+  label: string;
+  similarity: number;
+  victimCount: number;
+  isNewFingerprint: boolean;
+}
+
 export interface RiskResult {
   address: string;
   network: string;
@@ -30,6 +38,8 @@ export interface RiskResult {
   insufficientData: boolean;
   /** id of the persisted assessment — pass to api.submitFeedback */
   assessmentId?: string;
+  /** set only for HIGH_RISK/ACTIVE_SWEEPER_LIKELY results with a usable behavioral signature */
+  fingerprint?: FingerprintMatch | null;
 }
 
 export interface TransferCheckResult {

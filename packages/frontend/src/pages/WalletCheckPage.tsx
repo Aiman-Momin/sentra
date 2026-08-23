@@ -306,6 +306,49 @@ export function WalletCheckPage() {
             </Panel>
           )}
 
+          {risk.fingerprint && (
+            <Panel style={{ borderColor: "var(--stamp-red)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--stamp-red)",
+                    border: "1.5px solid var(--stamp-red)",
+                    borderRadius: 3,
+                    padding: "3px 9px",
+                    letterSpacing: "0.04em",
+                    transform: "rotate(-1.5deg)",
+                    display: "inline-block",
+                  }}
+                >
+                  PATTERN {risk.fingerprint.label}
+                </span>
+                {risk.fingerprint.isNewFingerprint && (
+                  <span className="mono" style={{ fontSize: 10, color: "var(--ink-faint)" }}>
+                    first time this pattern's been seen
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.5 }}>
+                {risk.fingerprint.isNewFingerprint ? (
+                  <>This wallet's drain behavior didn't match any pattern Sentra has seen before — it's now the first entry in this pattern.</>
+                ) : (
+                  <>
+                    Similar drain behavior — timing, assets, gas-funding pattern — detected across{" "}
+                    <strong>{risk.fingerprint.victimCount}</strong> wallet{risk.fingerprint.victimCount === 1 ? "" : "s"}, not just
+                    this one. This looks like the same operator or bot software, even though the destination address may differ each
+                    time.
+                  </>
+                )}
+              </div>
+              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", marginTop: 8 }}>
+                match confidence: {Math.round(risk.fingerprint.similarity * 100)}%
+              </div>
+            </Panel>
+          )}
+
           <Panel>
             <SectionHeading>Transaction Timeline</SectionHeading>
             <Timeline transfers={risk.timeline} network={risk.network} highlightTxHashes={allEvidence} />

@@ -114,3 +114,54 @@ model KnownAddress {
   @@unique([address, network])
   @@index([network, classification])
 }
+
+// A behavioral cluster of confirmed sweeps, built from measurable
+// dimensions in the data Sentra actually has (timing, assets, drain
+// percentage, gas-funding, active hours) — NOT a trained ML model. This
+// is deliberately transparent, rule-based similarity matching (see
+// fingerprintService.ts), so every clustering decision can be traced
+// back to the specific numbers that produced it.
+//
+// This is what lets Sentra recognize the same operator across DIFFERENT
+// destination wallets — address-level learning (KnownAddress) breaks the
+// moment an attacker rotates to a fresh collection address; this
+// recognizes them by HOW they drain instead of WHERE the funds went.
+model SweeperFingerprint {
+  id                   String   @id @default(cuid())
+  label                String   @unique // e.g. "SC-019", assigned sequentially
+  network              String
+  // Running averages, updated incrementally as new wallets match this
+  // fingerprint (see fingerprintService.ts for the update formula).
+  avgDrainDelaySeconds Float
+  avgDrainPercentage   Float
+  // 0-1 fraction of matched samples that showed a gas-funding-then-drain
+  // pattern, not a single boolean — mixed evidence across samples is
+  // normal and shouldn't be flattened into a false binary.
+  gasFundingRatio      Float    @default(0)
+  preferredAssets      Json // string[], deduped union across all samples
+  activeHoursUtc       Json // number[] 0-23, deduped union across all samples
+  sampleCount          Int      @default(1)
+  firstSeenAt          DateTime @default(now())
+  lastSeenAt           DateTime @updatedAt
+  matches              SweeperFingerprintMatch[]
+
+  @@index([network])
+}
+
+// One row per (fingerprint, victim wallet) — the audit trail behind
+// "similar behavior detected across N wallets." victimCount is always
+// computed live as a count of these rows, never a separately-maintained
+// counter that could drift out of sync.
+model SweeperFingerprintMatch {
+  id              String             @id @default(cuid())
+  fingerprint     SweeperFingerprint @relation(fields: [fingerprintId], references: [id])
+  fingerprintId   String
+  assessmentId    String
+  address         String
+  network         String
+  similarityScore Float
+  matchedAt       DateTime           @default(now())
+
+  @@unique([fingerprintId, address, network])
+  @@index([fingerprintId])
+}
