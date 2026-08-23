@@ -182,6 +182,19 @@ export async function fingerprintAssessment(
     }
   }
 
+  const confirmedMatch = await prisma.sweeperFingerprintMatch.findFirst({
+    where: {
+      address: result.address.toLowerCase(),
+      network: result.network,
+      confirmed: true,
+    },
+    include: { fingerprint: true },
+    orderBy: { matchedAt: "desc" },
+  });
+  if (confirmedMatch) {
+    best = { fp: confirmedMatch.fingerprint, score: similarity(fv, confirmedMatch.fingerprint) };
+  }
+
   let fingerprint;
   let isNewFingerprint = false;
 
