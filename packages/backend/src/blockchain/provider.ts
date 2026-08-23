@@ -92,7 +92,14 @@ function getProvider(network: string): ethers.JsonRpcProvider {
 }
 
 function isAlchemyEndpoint(rpcUrl: string): boolean {
-  return rpcUrl.includes("alchemy.com");
+  const isAlchemy = rpcUrl.includes("alchemy.com");
+  if (!isAlchemy) {
+    console.warn(
+      "[blockchain] RPC endpoint is not Alchemy. Native POL transfers will not be scanned. " +
+      "For complete transfer coverage, set SENTRA_RPC_* to an Alchemy endpoint URL (e.g., https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY)"
+    );
+  }
+  return isAlchemy;
 }
 
 function sleep(ms: number) {
@@ -274,10 +281,7 @@ async function fetchViaRawRpc(
   address: string,
   config: NetworkConfig
 ): Promise<NormalizedTransfer[]> {
-  console.warn(
-    "[blockchain] non-Alchemy RPC detected — using raw eth_getLogs fallback (ERC-20 only, native transfers not scanned). " +
-      "For full coverage and much better performance, use an Alchemy RPC URL."
-  );
+  console.log("[blockchain] Using raw eth_getLogs fallback (note: ERC-20 only, native transfers excluded)");
 
   const knownTokens = loadKnownTokensFromEnv(config.key);
   const tokensByAddress = new Map(knownTokens.map((t) => [t.address.toLowerCase(), t]));
@@ -344,7 +348,8 @@ export async function fetchWalletActivity(address: string, network: string): Pro
     ? await fetchViaAlchemy(provider, address, config)
     : await fetchViaRawRpc(provider, address, config);
 
-  console.log(`[blockchain] done in ${Date.now() - startedAt}ms — ${transfers.length} transfers found`);
+  const provider_type = isAlchemyEndpoint(config.rpcUrl) ? "Alchemy" : "raw RPC (ERC-20 only)";
+  console.log(`[blockchain] [${provider_type}] done in ${Date.now() - startedAt}ms — ${transfers.length} transfers found`);
 
   return {
     address,
