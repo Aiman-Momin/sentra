@@ -1,15 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
+import { ethers } from "ethers";
 import { checkWallet } from "../services/riskService.js";
 
 export const transferRouter = Router();
 
 const transferCheckSchema = z.object({
-  senderWallet: z.string().min(1),
-  recipientWallet: z.string().min(1),
+  senderWallet: z.string().refine(ethers.isAddress, "Sender must be a valid wallet address"),
+  recipientWallet: z.string().refine(ethers.isAddress, "Recipient must be a valid wallet address"),
   network: z.string().min(1),
   asset: z.string().min(1),
-  amount: z.string().min(1),
+  amount: z.string().refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, "Amount must be positive"),
 });
 
 /**

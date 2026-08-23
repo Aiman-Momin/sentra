@@ -19,8 +19,13 @@ the tab you're looking at, nothing standing or persistent.
    addresses inside "recipient address" form fields that don't show up
    in plain page text
 3. Each address found gets sent to `POST /api/check-recipient` on your
-   real deployed backend
-4. Results render right in the popup — risk level, score, and a "View
+   real deployed backend. When labeled sender, recipient, asset, and
+   amount fields are present, the extension sends the complete context to
+   `POST /api/check-transfer` instead.
+4. Results render right in the popup — risk level, score, and a clear
+   `DO NOT PROCEED` warning for high-risk transaction context. Sentra does
+   not submit, block, or alter the transaction.
+5. Results include a "View
    full report" link that opens the full evidence/timeline view on the
    main Sentra web app
 

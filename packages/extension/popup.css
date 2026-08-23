@@ -167,6 +167,23 @@ input[type="text"] {
   margin-bottom: 10px;
 }
 
+.transaction-context {
+  margin: 0 0 10px;
+  padding: 8px 9px;
+  border: 1px solid var(--rule);
+  background: var(--bg-1);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.transaction-context strong {
+  color: var(--cyan);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
 .checklist {
   display: flex;
   flex-direction: column;
@@ -266,6 +283,16 @@ input[type="text"] {
 
 .findings-empty {
   color: var(--ink-faint);
+}
+
+.findings-warning {
+  color: var(--stamp-red);
+  border-top-color: var(--stamp-red);
+  background: rgba(239, 85, 104, 0.08);
+}
+
+.findings-context {
+  color: var(--ink-soft);
 }
 
 .view-report {

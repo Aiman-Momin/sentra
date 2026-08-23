@@ -50,12 +50,35 @@ function caseFileRef(address) {
  * visible text AND common input/textarea fields (many exchange/DApp
  * "recipient address" fields don't put the address in visible text, only
  * in an input's value) for anything matching an EVM address shape.
- * Returns a deduped list, capped so a pathological page can't produce
- * hundreds of API calls.
+ * Returns addresses plus labeled transaction context, capped so a
+ * pathological page can't produce hundreds of API calls.
  */
-function extractAddressesFromPage(maxCount) {
+function extractPageContext(maxCount) {
   const ADDRESS_RE = /0x[a-fA-F0-9]{40}/g;
   const found = new Set();
+  const fields = [...(document.querySelectorAll("input, textarea, select") || [])];
+  const context = { senderWallet: "", recipientWallet: "", asset: "", amount: "" };
+
+  function fieldText(field) {
+    const describedBy = field.getAttribute("aria-label") || field.getAttribute("placeholder") || "";
+    const identity = `${field.name || ""} ${field.id || ""} ${describedBy}`.toLowerCase();
+    const parentText = field.parentElement?.innerText || "";
+    return `${identity} ${parentText}`.toLowerCase();
+  }
+
+  for (const field of fields) {
+    const value = field.value || "";
+    const hint = fieldText(field);
+    const address = value.match(ADDRESS_RE)?.[0] || "";
+    if (address && /recipient|receiver|destination|to address|withdraw to|beneficiary/.test(hint)) {
+      context.recipientWallet = context.recipientWallet || address;
+    } else if (address && /sender|from address|source|your wallet|pay from/.test(hint)) {
+      context.senderWallet = context.senderWallet || address;
+    }
+
+    if (value && /asset|token|currency|coin|payment asset/.test(hint)) context.asset = context.asset || value.trim();
+    if (value && /amount|quantity|value|send amount/.test(hint)) context.amount = context.amount || value.trim();
+  }
 
   const bodyText = document.body ? document.body.innerText || "" : "";
   for (const match of bodyText.matchAll(ADDRESS_RE)) {
@@ -64,7 +87,6 @@ function extractAddressesFromPage(maxCount) {
   }
 
   if (found.size < maxCount) {
-    const fields = document.querySelectorAll("input, textarea");
     for (const field of fields) {
       const value = field.value || "";
       for (const match of value.matchAll(ADDRESS_RE)) {
@@ -75,7 +97,8 @@ function extractAddressesFromPage(maxCount) {
     }
   }
 
-  return [...found];
+  context.recipientWallet = context.recipientWallet || [...found][0] || "";
+  return { addresses: [...found], transaction: context };
 }
 
 async function scanActiveTab() {
@@ -84,11 +107,11 @@ async function scanActiveTab() {
 
   const [injection] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    func: extractAddressesFromPage,
+    func: extractPageContext,
     args: [MAX_ADDRESSES_PER_SCAN],
   });
 
-  return injection?.result ?? [];
+  return injection?.result ?? { addresses: [], transaction: {} };
 }
 
 async function checkAddress(apiBaseUrl, address, network) {
@@ -104,12 +127,25 @@ async function checkAddress(apiBaseUrl, address, network) {
   return res.json();
 }
 
+async function checkTransfer(apiBaseUrl, transaction, network) {
+  const res = await fetch(`${apiBaseUrl}/api/check-transfer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...transaction, network }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || body.error || `Request failed (${res.status})`);
+  }
+  return res.json();
+}
+
 function renderEmpty(message) {
   resultsEl.innerHTML = `<div class="empty">${message}</div>`;
 }
 
 /** Initial "pending" state — the checklist reads as still-in-progress. */
-function renderResultCard(address, network) {
+function renderResultCard(address, network, transaction) {
   const card = document.createElement("div");
   card.className = "case-file";
   card.id = `case-${address}`;
@@ -121,6 +157,7 @@ function renderResultCard(address, network) {
     </div>
     <div class="case-file-label">SUBJECT ADDRESS</div>
     <div class="case-file-address">${address}</div>
+    ${transaction ? `<div class="transaction-context"><strong>TRANSACTION CONTEXT</strong><br/>${transaction.asset} · ${transaction.amount}</div>` : ""}
     <div class="checklist">
       <div class="checklist-item"><span class="checkbox spinning">·</span> Reading on-chain history</div>
       <div class="checklist-item"><span class="checkbox spinning">·</span> Checking detection signals</div>
@@ -134,7 +171,12 @@ function renderResultCard(address, network) {
   resultsEl.appendChild(card);
 }
 
-function stampFor(riskLevel) {
+function stampFor(riskLevel, score) {
+  if (typeof score === "number") {
+    if (score > 70) return { text: "DO NOT SEND", cls: "stamp-flagged" };
+    if (score > 50) return { text: "CAUTION", cls: "stamp-caution" };
+    return { text: "CLEARED", cls: "stamp-cleared" };
+  }
   switch (riskLevel) {
     case "ACTIVE_SWEEPER_LIKELY":
       return { text: "DO NOT SEND", cls: "stamp-flagged" };
@@ -147,7 +189,13 @@ function stampFor(riskLevel) {
   }
 }
 
-function updateResultCard(address, result, error) {
+function stampForTransfer(decision) {
+  return decision === "BLOCK"
+    ? { text: "DO NOT PROCEED", cls: "stamp-flagged" }
+    : { text: "REVIEWED — NO BLOCK", cls: "stamp-cleared" };
+}
+
+function updateResultCard(address, result, error, transaction) {
   const card = document.getElementById(`case-${address}`);
   if (!card) return;
 
@@ -171,23 +219,30 @@ function updateResultCard(address, result, error) {
     cb.textContent = "✓";
   });
 
-  const stamp = stampFor(result.riskLevel);
+  const risk = result.risk || result;
+  const stamp = transaction ? stampForTransfer(result.decision) : stampFor(risk.riskLevel, risk.riskScore);
   verdictRow.innerHTML = `
     <span class="stamp ${stamp.cls}">${stamp.text}</span>
-    <span class="score">${result.riskScore}<span class="score-max">/100</span></span>
+    <span class="score">${result.risk?.riskScore ?? result.riskScore}<span class="score-max">/100</span></span>
   `;
 
-  if (result.insufficientData) {
+  if (transaction && result.decision === "BLOCK") {
+    findingsEl.className = "findings findings-warning";
+    findingsEl.innerHTML = `<strong>HIGH-RISK TRANSACTION</strong><br/>${risk.recommendation}<br/><br/>Sentra flagged this recipient using real on-chain history. No funds were blocked or moved.`;
+  } else if (transaction) {
+    findingsEl.className = "findings findings-context";
+    findingsEl.innerHTML = `<strong>TRANSACTION REVIEWED</strong><br/>${risk.recommendation}<br/><br/>Sentra found no blocking risk level. Review the recipient and transaction details before proceeding.`;
+  } else if (risk.insufficientData) {
     findingsEl.className = "findings findings-empty";
     findingsEl.textContent = "No on-chain history found in the scanned window.";
-  } else if (result.signals.length === 0) {
+  } else if (risk.signals.length === 0) {
     findingsEl.className = "findings findings-empty";
     findingsEl.textContent = "No sweeper-bot signals detected.";
   } else {
     findingsEl.className = "findings";
-    let html = result.signals.map((s) => `· ${s.description}`).join("<br/>");
-    if (result.fingerprint && !result.fingerprint.isNewFingerprint) {
-      html += `<br/><br/><strong style="color:var(--stamp-red)">PATTERN ${result.fingerprint.label}</strong> — detected across ${result.fingerprint.victimCount} unique wallet${result.fingerprint.victimCount === 1 ? "" : "s"}`;
+    let html = risk.signals.map((s) => `· ${s.description}`).join("<br/>");
+    if (risk.fingerprint && !risk.fingerprint.isNewFingerprint) {
+      html += `<br/><br/><strong style="color:var(--stamp-red)">PATTERN ${risk.fingerprint.label}</strong> — detected across ${risk.fingerprint.victimCount} unique wallet${risk.fingerprint.victimCount === 1 ? "" : "s"}`;
     }
     findingsEl.innerHTML = html;
   }
@@ -212,7 +267,9 @@ async function runScan() {
   try {
     const { apiBaseUrl, webappUrl } = await getSettings();
     const network = networkSelect.value;
-    const addresses = await scanActiveTab();
+    const pageContext = await scanActiveTab();
+    const addresses = pageContext.addresses;
+    const transaction = pageContext.transaction;
 
     if (addresses.length === 0) {
       setStatus("");
@@ -223,17 +280,19 @@ async function runScan() {
 
     setStatus(`Found ${addresses.length} address${addresses.length > 1 ? "es" : ""} — checking with Sentra…`);
 
-    for (const address of addresses) {
-      renderResultCard(address, network);
-    }
+    const hasTransactionContext = transaction.senderWallet && transaction.recipientWallet && transaction.asset && transaction.amount;
+    if (hasTransactionContext) renderResultCard(transaction.recipientWallet, network, transaction);
+    else for (const address of addresses) renderResultCard(address, network);
 
     // Check concurrently, but update each card as its own result lands —
     // one slow/failed check shouldn't hold up the others.
     await Promise.all(
-      addresses.map(async (address) => {
+      (hasTransactionContext ? [transaction.recipientWallet] : addresses).map(async (address) => {
         try {
-          const result = await checkAddress(apiBaseUrl, address, network);
-          updateResultCard(address, result, null);
+          const result = hasTransactionContext
+            ? await checkTransfer(apiBaseUrl, transaction, network)
+            : await checkAddress(apiBaseUrl, address, network);
+          updateResultCard(address, result, null, hasTransactionContext ? transaction : null);
           addViewReportLink(address, network, webappUrl);
         } catch (err) {
           updateResultCard(address, null, err);
