@@ -10,6 +10,7 @@
   "scripts": {
     "test:engine": "npm run test --workspace=@sentra/detection-engine",
     "dev:backend": "npm run dev --workspace=@sentra/backend",
-    "dev:frontend": "npm run dev --workspace=sentra-frontend"
+    "dev:frontend": "npm run dev --workspace=sentra-frontend",
+    "prisma:deploy": "npm run prisma:deploy --workspace=@sentra/backend"
   }
 }

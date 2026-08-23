@@ -160,6 +160,7 @@ model SweeperFingerprintMatch {
   address         String
   network         String
   similarityScore Float
+  confirmed       Boolean            @default(false)
   matchedAt       DateTime           @default(now())
 
   @@unique([fingerprintId, address, network])

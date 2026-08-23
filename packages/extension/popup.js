@@ -187,7 +187,7 @@ function updateResultCard(address, result, error) {
     findingsEl.className = "findings";
     let html = result.signals.map((s) => `· ${s.description}`).join("<br/>");
     if (result.fingerprint && !result.fingerprint.isNewFingerprint) {
-      html += `<br/><br/><strong style="color:var(--stamp-red)">PATTERN ${result.fingerprint.label}</strong> — seen across ${result.fingerprint.victimCount} wallets`;
+      html += `<br/><br/><strong style="color:var(--stamp-red)">PATTERN ${result.fingerprint.label}</strong> — detected across ${result.fingerprint.victimCount} unique wallet${result.fingerprint.victimCount === 1 ? "" : "s"}`;
     }
     findingsEl.innerHTML = html;
   }

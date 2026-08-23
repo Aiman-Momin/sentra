@@ -95,7 +95,19 @@ export function WalletCheckPage() {
     if (!risk?.assessmentId) return;
     setFeedbackStatus("submitting");
     try {
-      await api.submitFeedback(risk.assessmentId, verdict);
+      const feedback = await api.submitFeedback(risk.assessmentId, verdict);
+      const currentFingerprint = risk.fingerprint;
+      const fingerprintCount = currentFingerprint
+        ? feedback.fingerprints.find((item) => item.fingerprintId === currentFingerprint.fingerprintId)?.victimCount
+        : undefined;
+      if (currentFingerprint && fingerprintCount !== undefined) {
+        const updatedFingerprint = { ...currentFingerprint, victimCount: fingerprintCount };
+        if (transferResult) {
+          setTransferResult({ ...transferResult, risk: { ...transferResult.risk, fingerprint: updatedFingerprint } });
+        } else if (result) {
+          setResult({ ...result, fingerprint: updatedFingerprint });
+        }
+      }
       setFeedbackVerdict(verdict);
       setFeedbackStatus("submitted");
     } catch {
@@ -332,16 +344,13 @@ export function WalletCheckPage() {
                 )}
               </div>
               <div style={{ fontSize: 13.5, lineHeight: 1.5 }}>
-                {risk.fingerprint.isNewFingerprint ? (
-                  <>This wallet's drain behavior didn't match any pattern Sentra has seen before — it's now the first entry in this pattern.</>
-                ) : (
-                  <>
-                    Similar drain behavior — timing, assets, gas-funding pattern — detected across{" "}
-                    <strong>{risk.fingerprint.victimCount}</strong> wallet{risk.fingerprint.victimCount === 1 ? "" : "s"}, not just
-                    this one. This looks like the same operator or bot software, even though the destination address may differ each
-                    time.
-                  </>
-                )}
+                <>
+                  Similar drain behavior — timing, assets, gas-funding pattern — detected across{" "}
+                  <strong>{risk.fingerprint.victimCount}</strong> unique wallet{risk.fingerprint.victimCount === 1 ? "" : "s"}.
+                  {risk.fingerprint.isNewFingerprint && " This is the first confirmed occurrence for this pattern."}
+                  {!risk.fingerprint.isNewFingerprint &&
+                    " This looks like the same operator or bot software, even though the destination address may differ each time."}
+                </>
               </div>
               <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", marginTop: 8 }}>
                 match confidence: {Math.round(risk.fingerprint.similarity * 100)}%

@@ -240,7 +240,9 @@ export async function fingerprintAssessment(
     },
   });
 
-  const victimCount = await prisma.sweeperFingerprintMatch.count({ where: { fingerprintId: fingerprint.id } });
+  const victimCount = await prisma.sweeperFingerprintMatch.count({
+    where: { fingerprintId: fingerprint.id, confirmed: true },
+  });
 
   return {
     fingerprintId: fingerprint.id,
@@ -256,7 +258,9 @@ export async function listFingerprints() {
   return Promise.all(
     fingerprints.map(async (fp: (typeof fingerprints)[number]) => ({
       ...fp,
-      victimCount: await prisma.sweeperFingerprintMatch.count({ where: { fingerprintId: fp.id } }),
+      victimCount: await prisma.sweeperFingerprintMatch.count({
+        where: { fingerprintId: fp.id, confirmed: true },
+      }),
     }))
   );
 }

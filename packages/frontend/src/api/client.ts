@@ -109,7 +109,10 @@ export const api = {
   listAlerts: (walletId?: string) => request<Alert[]>(`/monitor/alerts${walletId ? `?walletId=${walletId}` : ""}`),
 
   submitFeedback: (assessmentId: string, verdict: "FALSE_POSITIVE" | "CONFIRMED_SWEEPER") =>
-    request<{ updatedAddresses: string[] }>("/feedback", {
+    request<{
+      updatedAddresses: string[];
+      fingerprints: { fingerprintId: string; label: string; victimCount: number }[];
+    }>("/feedback", {
       method: "POST",
       body: JSON.stringify({ assessmentId, verdict }),
     }),

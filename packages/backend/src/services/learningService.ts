@@ -121,7 +121,13 @@ export type FeedbackVerdict = "FALSE_POSITIVE" | "CONFIRMED_SWEEPER";
  * MANUAL source, so it can never be silently overridden by auto-learning
  * later.
  */
-export async function submitFeedback(assessmentId: string, verdict: FeedbackVerdict): Promise<{ updatedAddresses: string[] }> {
+export async function submitFeedback(
+  assessmentId: string,
+  verdict: FeedbackVerdict
+): Promise<{
+  updatedAddresses: string[];
+  fingerprints: { fingerprintId: string; label: string; victimCount: number }[];
+}> {
   const assessment = await prisma.riskAssessment.findUniqueOrThrow({ where: { id: assessmentId } });
 
   const signals = assessment.signals as unknown as RiskSignal[];
@@ -158,5 +164,29 @@ export async function submitFeedback(assessmentId: string, verdict: FeedbackVerd
     });
   }
 
-  return { updatedAddresses: [...involvedDestinations] };
+  if (verdict === "CONFIRMED_SWEEPER") {
+    await prisma.sweeperFingerprintMatch.updateMany({
+      where: {
+        address: assessment.address.toLowerCase(),
+        network: assessment.network,
+      },
+      data: { confirmed: true },
+    });
+  }
+
+  const walletFingerprints = await prisma.sweeperFingerprintMatch.findMany({
+    where: { address: assessment.address.toLowerCase(), network: assessment.network },
+    include: { fingerprint: true },
+  });
+  const fingerprints = await Promise.all(
+    walletFingerprints.map(async (match) => ({
+      fingerprintId: match.fingerprintId,
+      label: match.fingerprint.label,
+      victimCount: await prisma.sweeperFingerprintMatch.count({
+        where: { fingerprintId: match.fingerprintId, confirmed: true },
+      }),
+    }))
+  );
+
+  return { updatedAddresses: [...involvedDestinations], fingerprints };
 }
